@@ -17,6 +17,8 @@ public partial class Sale
 
     public virtual Customer? Customer { get; set; }
 
+    public virtual Product? Product { get; set; }
+
     public virtual Product IdNavigation { get; set; } = null!;
 
     public virtual Store? Store { get; set; }
