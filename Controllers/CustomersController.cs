@@ -2,14 +2,18 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using MVPStudioReactOnboarding.Code;
+using MVPStudioReactOnboarding.Dto;
 using MVPStudioReactOnboarding.Models;
 
 namespace MVPStudioReactOnboarding.Controllers
 {
-    public class CustomersController : Controller
+    [Route("api/[controller]")]
+    [ApiController]
+    public class CustomersController : ControllerBase
     {
         private readonly MvponboardingReactContext _context;
 
@@ -18,145 +22,122 @@ namespace MVPStudioReactOnboarding.Controllers
             _context = context;
         }
 
-        // GET: Customers
-        public async Task<IActionResult> Index()
+        // GET: api/Customers
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<CustomerDto>>> GetCustomers()
         {
-              return _context.Customers != null ? 
-                          View(await _context.Customers.ToListAsync()) :
-                          Problem("Entity set 'MvponboardingReactContext.Customers'  is null.");
+            try
+            {
+                if (_context.Customers == null)
+                {
+                    return NotFound();
+                }
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+                var customers = await _context.Customers.Select(s => Mapper.MapCustomerDto(s)).ToListAsync();
+                return new JsonResult(customers);
         }
 
-        // GET: Customers/Details/5
-        public async Task<IActionResult> Details(int? id)
+        // GET: api/Customers/5
+        [HttpGet("{id}")]
+        public async Task<ActionResult<Customer>> GetCustomer(int id)
         {
-            if (id == null || _context.Customers == null)
-            {
-                return NotFound();
-            }
-
-            var customer = await _context.Customers
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (customer == null)
-            {
-                return NotFound();
-            }
-
-            return View(customer);
-        }
-
-        // GET: Customers/Create
-        public IActionResult Create()
-        {
-            return View();
-        }
-
-        // POST: Customers/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Name,Address")] Customer customer)
-        {
-            if (ModelState.IsValid)
-            {
-                _context.Add(customer);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
-            }
-            return View(customer);
-        }
-
-        // GET: Customers/Edit/5
-        public async Task<IActionResult> Edit(int? id)
-        {
-            if (id == null || _context.Customers == null)
-            {
-                return NotFound();
-            }
-
+          if (_context.Customers == null)
+          {
+              return NotFound();
+          }
             var customer = await _context.Customers.FindAsync(id);
+
             if (customer == null)
             {
                 return NotFound();
             }
-            return View(customer);
+
+            return customer;
         }
 
-        // POST: Customers/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Name,Address")] Customer customer)
+        // PUT: api/Customers/5
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutCustomer(int id, Customer customer)
         {
             if (id != customer.Id)
             {
-                return NotFound();
+                return BadRequest();
             }
 
-            if (ModelState.IsValid)
+            _context.Entry(customer).State = EntityState.Modified;
+
+            try
             {
-                try
-                {
-                    _context.Update(customer);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!CustomerExists(customer.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
+                await _context.SaveChangesAsync();
             }
-            return View(customer);
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!CustomerExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return NoContent();
         }
 
-        // GET: Customers/Delete/5
-        public async Task<IActionResult> Delete(int? id)
+        // POST: api/Customers
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        [HttpPost]
+        public async Task<ActionResult<CustomerDto>> PostCustomer(CustomerDto customer)
         {
-            if (id == null || _context.Customers == null)
+            if (_context.Customers == null)
+            {
+                return Problem("Entity set 'Mvponboarding1Context.Customers'  is null.");
+            }
+
+            var entity = Mapper.MapCustomer(customer);
+
+            if (customer.Id == 0)
+            {
+                _context.Customers.Add(entity);
+                await _context.SaveChangesAsync();
+            }
+            else
+            {
+                _context.Customers.Update(entity).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
+            }
+            return new JsonResult(Mapper.MapCustomerDto(entity));
+        }
+
+        // DELETE: api/Customers/5
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteCustomer(int id)
+        {
+            if (_context.Customers == null)
             {
                 return NotFound();
             }
-
-            var customer = await _context.Customers
-                .FirstOrDefaultAsync(m => m.Id == id);
+            var customer = await _context.Customers.FindAsync(id);
             if (customer == null)
             {
                 return NotFound();
             }
 
-            return View(customer);
-        }
-
-        // POST: Customers/Delete/5
-        [HttpPost, ActionName("Delete")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id)
-        {
-            if (_context.Customers == null)
-            {
-                return Problem("Entity set 'MvponboardingReactContext.Customers'  is null.");
-            }
-            var customer = await _context.Customers.FindAsync(id);
-            if (customer != null)
-            {
-                _context.Customers.Remove(customer);
-            }
-            
+            _context.Customers.Remove(customer);
             await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+
+            return new JsonResult(Mapper.MapCustomerDto(customer));
         }
 
         private bool CustomerExists(int id)
         {
-          return (_context.Customers?.Any(e => e.Id == id)).GetValueOrDefault();
+            return (_context.Customers?.Any(e => e.Id == id)).GetValueOrDefault();
         }
     }
 }
