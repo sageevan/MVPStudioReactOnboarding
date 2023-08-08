@@ -1,6 +1,5 @@
 ﻿import React, { Component } from 'react';
 import { BsFillTrashFill, BsFillPencilFill } from "react-icons/bs";
-import { Modal, Button, Row, Column, Form } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import $ from 'jquery'
 import Popup from '../Popup';
@@ -11,9 +10,16 @@ export class CustomerList extends Component {
 
     constructor(props) {
         super(props);
-        this.state = {
-            showmodal: false, current: '', customers: [], loading: true, editing: false
-        };
+        this.state = { isOpen: false, current: '', customers: [], loading: true, editing: false };
+    }
+
+    cancelPopup() {
+        console.log("sha");
+        this.populateCustomerData();
+        this.setState({
+            isOpen: false
+        });
+
 
     }
 
@@ -23,7 +29,7 @@ export class CustomerList extends Component {
 
     //Render the Customer data from model to view
     renderCustomers(data) {
-          this.setState({ customers: data, loading: true });
+          this.setState({ customers: data, loading: true, isOpen:false});
     }
 
     //Get Customer Details from Model
@@ -42,15 +48,13 @@ export class CustomerList extends Component {
 
     }
     //Get the cutomer to be edited and render to edittable
-    updateCustomer(editcustomer) {
-    
-        this.setState({ current: editcustomer, showmodal:true, editing: true })
+    updateCustomer(customer) {
+
+        this.setState({isOpen:true, current:customer, loading: true })
     }
-    handleModal() {
-        this.Popup.trigger = false;
-    }
+
     saveCustomer(customer) {
-        console.log(customer);
+        console.log("sha");
         fetch('api/Customers', {
             method: 'post',
             headers: new Headers({
@@ -62,8 +66,8 @@ export class CustomerList extends Component {
             .then(response => response.json())
             .then(
                 (result) => {
-                    this.populateCustomerData(this.state.currentPage)
-                    this.setState({ editing: false, loading: true })
+                    this.populateCustomerData()
+                    this.setState({ editing: false, loading: true,isOpen:false })
                 },
                 (error) => {
                     alert("Failed");
@@ -85,9 +89,9 @@ export class CustomerList extends Component {
         alert(msg);
     }
     //Render cutomer table for view
-    static renderCustomerTable(customers, ctrl) {
-          return (
-            <div className="container">
+    static renderCustomerTable(customers,currentCustomer, ctrl,popup) {
+         return (
+            <div>
                 <table className='table table-striped' aria-labelledby="tabelLabel">
                     <thead>
                         <tr>
@@ -103,55 +107,53 @@ export class CustomerList extends Component {
                                 <td>{customer.name}</td>
                                 <td>{customer.address}</td>
                                 <td><button className="btn-edit" onClick={() => { ctrl.updateCustomer(customer) }}><BsFillPencilFill /></button></td>
-                                <td><button className="btn-delete" onClick={() => { ctrl.deleteCustomer(customer) }}><BsFillTrashFill /></button></td>
+                              <td><button className="btn-delete" onClick={() => { ctrl.deleteCustomer(customer) }}><BsFillTrashFill /></button></td>
                             </tr>
-                        )}
-                      </tbody>
-                      <table className='table table-striped' aria-labelledby="tabelLabel"></table>
-                  </table>
-                </div>
-        );
-
-    }
-    //render edittable view for the clicked cutomer
-    static renderCurrentCustomer(customer,ctrl) {
-        console.log("sha");
-        return (
-            <Popup trigger={true}>
-                <table className='table table-striped' aria-labelledby="tabelLabel">
-
-                    <thead>
-                        <tr>
-                            <th>Customer Details {customer.name}</th>
-
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr key={customer.id}>
-                            <td>
-                                <p> <input type="hidden" value={customer.id} name="customerId" /></p>
-                                <p><label name="cus-name">Customer Name &nbsp;&nbsp;  : &nbsp; </label>
-                                    <input type="text" defaultValue={customer.name} contentEditable name="name" onChange={(event) => { customer.name = event.target.value; }} /> </p>
-                                <p><label name="cus-name">Customer Address : &nbsp; </label>
-                                    <input type="text" defaultValue={customer.address} name="address" onChange={(event) => { customer.address = event.target.value; }} /> </p>
-                                <td><input type="button" onClick={() => { ctrl.saveCustomer(customer) }} value="Save" /></td>
-                                <td><input type="button" onClick={() => { ctrl.handleModal() }} value="Cancel" /></td>
-                            </td>
-                        </tr>
+                      )}
                     </tbody>
+                    <table className='table table-striped' aria-labelledby="tabelLabel"></table>
+                </table>
 
-                    </table>
-            </Popup>
-           );
+
+                {popup && (
+                    <Popup trigger={popup}>
+                        <table className='table table-striped' aria-labelledby="tabelLabel">
+
+                            <thead>
+                                <tr>
+                                    <th>Customer Details {currentCustomer.name}</th>
+
+                                </tr>
+                            </thead>
+                            <tbody>
+                                 <tr key={currentCustomer.id}>
+                                    <td>
+                                        <p> <input type="hidden" value={currentCustomer.id} name="customerId" /></p>
+                                        <p><label name="cus-name">Customer Name &nbsp;&nbsp;  : &nbsp; </label>
+                                            <input type="text" defaultValue={currentCustomer.name} contentEditable name="name" onChange={(event) => { currentCustomer.name = event.target.value; }} /> </p>
+                                        <p><label name="cus-name">Customer Address : &nbsp; </label>
+                                            <input type="text" defaultValue={currentCustomer.address} name="address" onChange={(event) => { currentCustomer.address = event.target.value; }} /> </p>
+                                        <td><input type="button" value="Save" onClick={() => { ctrl.saveCustomer(currentCustomer) }} /></td>
+                                        <td><input type="button" value="Cancel" onClick={() => { ctrl.cancelPopup() }} /></td>
+                                    </td>
+                                </tr>
+                            </tbody>
+
+                        </table>
+                    </Popup>
+                )}
+            </div>
+        );
     }
+  
     render() {
         let contents = this.state.loading
-            ? CustomerList.renderCustomerTable(this.state.customers, this)
+            ? CustomerList.renderCustomerTable(this.state.customers,this.state.current, this, this.state.isOpen)
             : CustomerList.pagination();
 
-        contents = this.state.editing
-            ? CustomerList.renderCurrentCustomer(this.state.current, this)
-            : CustomerList.renderCustomerTable(this.state.customers, this);
+        //contents = this.state.editing
+        //    ? CustomerList.renderCurrentCustomer(this.state.current, this)
+        //    : CustomerList.renderCustomerTable(this.state.customers, this);
         return (
             <div>
                 <div className="table-title">
