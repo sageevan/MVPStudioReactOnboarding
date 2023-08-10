@@ -3,14 +3,14 @@ import { BsFillTrashFill, BsFillPencilFill } from "react-icons/bs";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import $ from 'jquery'
 import Popup from '../Popup';
-import './Components.css';
+import '../Components.css';
 
 export class CustomerList extends Component {
     static displayName = CustomerList.name;
 
     constructor(props) {
         super(props);
-        this.state = { createOpen: true, editOpen: false, deleteOpen: false, current: '', customers: [], loading: true, editing: false, currentPage: 1, rowsPerPage: 8, totalCustomers: 0, error: false };
+        this.state = { createOpen: true, editOpen: false, deleteOpen: false, current: '', customers: [], loading: true, editing: false, currentPage: 1, noOfCustomersPerPage: 5, totalCustomers: 0, error: false };
     }
 
     //close popup window
@@ -39,8 +39,8 @@ export class CustomerList extends Component {
             type: 'GET',
             dataType: 'json',
             success: (ajaxResult) => {
-                const indexOfLastCust = this.state.currentPage * this.state.rowsPerPage;
-                const indexOfFirstCust = indexOfLastCust - this.state.rowsPerPage;
+                const indexOfLastCust = this.state.currentPage * this.state.noOfCustomersPerPage;
+                const indexOfFirstCust = indexOfLastCust - this.state.noOfCustomersPerPage;
                 const currentCustomers = ajaxResult.slice(indexOfFirstCust, indexOfLastCust);
                 this.setState({ totalCustomers: ajaxResult.length, customers: currentCustomers, loading: true });
             },
@@ -50,20 +50,35 @@ export class CustomerList extends Component {
         });
 
     }
+    noOfCustomersPerPage(noofcustomersperpage) {
+        this.setState({ noOfCustomersPerPage: noofcustomersperpage, loading: true })
+        this.populateCustomerData(this.state.currentPage);
+    }
 
     //pagination implementation
     pagination() {
         let pages = [];
-        for (let i = 1; i <= Math.ceil(this.state.totalCustomers / this.state.rowsPerPage); i++) {
+        for (let i = 1; i <= Math.ceil(this.state.totalCustomers / this.state.noOfCustomersPerPage); i++) {
             pages.push(i);
         }
         return (
-            <div>
+            <div className="pagination">
+               <p><label for="noOfCustomersPerPage">Number of Customers in a page:</label>
+                
+                <select name="noOfCustomersPerPage" onChange={(e) => { this.noOfCustomersPerPage(e.target.value) }}>
+                    <option>5</option>
+                    <option>10</option>
+                    <option>20</option>
+                    <option>50</option>
+                    </select>
+
+                <br></br>
                 {
                     pages.map((page, index) => {
-                        return <button className="btn-page" key={index} onClick={() => { this.populateCustomerData(page) }}>{page}</button>
+                        return <button key={index} onClick={() => { this.populateCustomerData(page) }}>{page}</button>
                     })
-                }
+                    }
+                    </p>
             </div>
         )
     }
@@ -78,26 +93,26 @@ export class CustomerList extends Component {
         if (customer.name.length == 0 || customer.address.length == 0) {
             this.setState({ error: true });
         }
-        if (customer.name && customer.address) { 
-        fetch('api/Customers', {
-            method: 'post',
-            headers: new Headers({
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            }),
-            body: JSON.stringify(customer)
-        })
-            .then(response => response.json())
-            .then(
-                (result) => {
-                    this.populateCustomerData(this.state.currentPage)
-                    this.setState({ loading: true, editOpen: false, createOpen: true })
-                },
-                (error) => {
-                    alert("Failed");
-                }
-            );
-    }
+        if (customer.name && customer.address) {
+            fetch('api/Customers', {
+                method: 'post',
+                headers: new Headers({
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }),
+                body: JSON.stringify(customer)
+            })
+                .then(response => response.json())
+                .then(
+                    (result) => {
+                        this.populateCustomerData(this.state.currentPage)
+                        this.setState({ loading: true, editOpen: false, createOpen: true })
+                    },
+                    (error) => {
+                        alert("Failed");
+                    }
+                );
+        }
     }
     //request to delete a customer 
     deleteCustomerRequest(customer) {
@@ -125,7 +140,7 @@ export class CustomerList extends Component {
         this.setState({
             cretaOpen: false,
             editOpen: true,
-            error:false,
+            error: false,
             loading: true,
             current: {
                 customerId: 0,
@@ -134,12 +149,6 @@ export class CustomerList extends Component {
             }
         })
     }
-
-    handleSubmit(customer) {
-        console.log("sha");
-
-    }
-
 
     //Handle exception from Ajax Call
     static handleException(request, message, error) {
@@ -187,28 +196,31 @@ export class CustomerList extends Component {
 
                             <thead>
                                 <tr>
-                                    <th>Customer Details {currentCustomer.name}</th>
+                                    <th className="popup-title">Customer Details</th>
 
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr key={currentCustomer.id}>
                                     <td>
-                                            <p> <input type="hidden" value={currentCustomer.id} name="customerId" /></p>
-                                            <p><label name="cus-name">Customer Name &nbsp;&nbsp;  : &nbsp; </label>
-                                                <input type="text" defaultValue={currentCustomer.name} contentEditable name="name" onChange={(event) => { currentCustomer.name = event.target.value; }} />
-                                                {error && currentCustomer.name.length<=0 ?
-                                                    <label>Name Canot be empty</label> : ""}                                         </p>
-                                            <p><label name="cus-name">Customer Address : &nbsp; </label>
-                                                <input type="text" defaultValue={currentCustomer.address} name="address" onChange={(event) => { currentCustomer.address = event.target.value; }} /> </p>
-                                            <td><input type="button" value="Save" onClick={() => { ctrl.saveCustomer(currentCustomer) }} /></td>
-                                            <td><input type="button" value="Cancel" onClick={() => { ctrl.cancelPopup() }} /></td>
+                                        <p> <input type="hidden" value={currentCustomer.id} name="customerId" /></p>
+                                        <p><input type="text" placeholder="Customer Name" defaultValue={currentCustomer.name} contentEditable name="name" onChange={(event) => { currentCustomer.name = event.target.value; }} />
+                                            {error && currentCustomer.name.length <= 0 ?
+                                                <label className="error">Name cannot be empty* </label> : ""}
+                                        </p>
+                                        <p><input type="text" placeholder="Customer Address" defaultValue={currentCustomer.address} name="address" onChange={(event) => { currentCustomer.address = event.target.value; }} />
+                                            {error && currentCustomer.address.length <= 0 ?
+                                                <label className="error">Address Cannot be empty*</label> : ""}
+                                        </p>
+                                        <div className="submit-btn">
+                                            <button onClick={() => { ctrl.saveCustomer(currentCustomer) }}>Save</button>
+                                            <button onClick={() => { ctrl.cancelPopup() }}>Cancel</button></div>
 
                                     </td>
                                 </tr>
                             </tbody>
 
-                            </table>
+                        </table>
                     </Popup>
                 )}
 
@@ -224,9 +236,9 @@ export class CustomerList extends Component {
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td>
+                                    <td><div className="submit-btn">
                                         <td><input type="button" value="Yes" onClick={() => { ctrl.deleteCustomer(currentCustomer) }} /></td>
-                                        <td><input type="button" value="No" onClick={() => { ctrl.cancelPopup() }} /></td>
+                                        <td><input type="button" value="No" onClick={() => { ctrl.cancelPopup() }} /></td></div>
                                     </td>
                                 </tr>
                             </tbody>
@@ -253,7 +265,6 @@ export class CustomerList extends Component {
                     <button className="btn-create-new" onClick={() => { this.createCustomer() }}>Create New</button>
                     : null
                 }
-                <div></div>
                 {this.state.currentPage > 0 ?
                     this.pagination()
                     : null
