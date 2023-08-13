@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using MVPStudioReactOnboarding.Dto;
+using MVPStudioReactOnboarding.Code;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MVPStudioReactOnboarding.Models;
@@ -22,15 +24,21 @@ namespace MVPStudioReactOnboarding.Controllers
 
         // GET: api/Sales
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Sale>>> GetSales()
+        public async Task<ActionResult<IEnumerable<SaleDto>>> GetSales()
         {
-          if (_context.Sales == null)
-          {
-              return NotFound();
-          }
-            return await _context.Sales.ToListAsync();
+            if (_context.Sales == null)
+            {
+                return NotFound();
+            }
+            var sale = await _context.Sales
+                  .Include(p => p.Product)
+                  .Include(s => s.Store)
+                  .Include(c => c.Customer).ToListAsync();
+
+            return sale.Select(s => Mapper.MapSaleDto(s)).ToList();
         }
 
+       
         // GET: api/Sales/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Sale>> GetSale(int id)
@@ -83,16 +91,39 @@ namespace MVPStudioReactOnboarding.Controllers
         // POST: api/Sales
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Sale>> PostSale(Sale sale)
+        public async Task<ActionResult<SaleDto>> PostSale([Bind("Id,ProductId,CustomerId,StoreId,DateSold")]SaleDto sale)
         {
-          if (_context.Sales == null)
-          {
-              return Problem("Entity set 'MvponboardingReactContext.Sales'  is null.");
-          }
-            _context.Sales.Add(sale);
-            await _context.SaveChangesAsync();
+            if (_context.Sales == null)
+            {
+                return Problem("Entity set Sales is null.");
+            }
 
-            return CreatedAtAction("GetSale", new { id = sale.Id }, sale);
+            //var saleMap = await _context.Sales
+            //      .Include(p => p.Product)
+            //      .Include(s => s.Store)
+            //      .Include(c => c.Customer).ToListAsync();
+
+            //var entity= sale.Select(s => Mapper.MapSale(s)).ToList();
+
+            var entity = Mapper.MapSale(sale);
+
+            if (sale.Id == 0)
+            {
+                _context.Sales.Add(entity);
+                await _context.SaveChangesAsync();
+            }
+            else
+            {
+                _context.Sales.Update(entity).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
+            }
+
+            return new JsonResult(Mapper.MapSaleDto(entity));
+
+
+
+
+
         }
 
         // DELETE: api/Sales/5

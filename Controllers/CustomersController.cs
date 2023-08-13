@@ -97,7 +97,7 @@ namespace MVPStudioReactOnboarding.Controllers
         {
             if (_context.Customers == null)
             {
-                return Problem("Entity set 'Mvponboarding1Context.Customers'  is null.");
+                return Problem("Entity set Customers is null.");
             }
 
             var entity = Mapper.MapCustomer(customer);
@@ -112,7 +112,8 @@ namespace MVPStudioReactOnboarding.Controllers
                 _context.Customers.Update(entity).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
             }
-            return new JsonResult(Mapper.MapCustomerDto(entity));
+
+             return new JsonResult(Mapper.MapCustomerDto(entity));
         }
 
         // DELETE: api/Customers/5

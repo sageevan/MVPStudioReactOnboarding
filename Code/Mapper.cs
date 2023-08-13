@@ -13,8 +13,9 @@ namespace MVPStudioReactOnboarding.Code
             {
                 sale = new Dto.SaleDto
                 {
+                    SaleAmount = Sale?.Product.Price,
                     Id = Sale.Id,
-                    CustomerName = Sale.Customer.Name,
+                    CustomerName = Sale?.Customer.Name,
                     ProductName = Sale.Product.Name,
                     StoreName = Sale.Store.Name,
                     DateSold = Sale.DateSold,
@@ -22,17 +23,30 @@ namespace MVPStudioReactOnboarding.Code
             }
             return sale;
         }
-        public static Dto.SaleDto MapSale(Models.Sale Sale)
+        public static Models.Sale MapSale(SaleDto Sale)
         {
-            var sale = new Dto.SaleDto
+            var sale = new Models.Sale();
+            if (Sale != null)
             {
-                CustomerName = Sale?.Customer?.Name,
-                ProductName = Sale?.Product?.Name,
-                StoreName = Sale?.Store?.Name,
-            };
+                sale.Customer.Name = Sale.CustomerName;
+                sale.Product.Name = Sale.ProductName;
+                sale.Store.Name= Sale.StoreName;
+                sale.DateSold = Sale.DateSold;
+                sale.Product.Price = Sale.SaleAmount;
+             }
             return sale;
         }
-
+        public static Models.Customer MapCustomer(CustomerDto Customer)
+        {
+            var customer = new Models.Customer();
+            if (Customer != null)
+            {
+                customer.Id = Customer.Id;
+                customer.Address = Customer.Address;
+                customer.Name = Customer.Name;
+            }
+            return customer;
+        }
         public static Dto.CustomerDto MapCustomerDto(Models.Customer Customer)
         {
             var customer = new Dto.CustomerDto();
@@ -49,17 +63,7 @@ namespace MVPStudioReactOnboarding.Code
             return customer;
         }
 
-        public static Models.Customer MapCustomer(CustomerDto Customer)
-        {
-            var customer = new Models.Customer();
-            if (Customer != null)
-            {
-                customer.Id = Customer.Id;
-                customer.Address = Customer.Address;
-                customer.Name = Customer.Name;
-            }
-            return customer;
-        }
+       
 
         public static Dto.ProductDto MapProductDto(Models.Product Product)
         {

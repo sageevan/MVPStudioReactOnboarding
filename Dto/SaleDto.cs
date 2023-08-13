@@ -3,7 +3,7 @@
     public class SaleDto
     {
         public int Id { get; set; }
-
+        public decimal? SaleAmount { get; set; }
         public String ProductName { get; set; } = string.Empty;
 
         public String CustomerName { get; set; } = string.Empty;

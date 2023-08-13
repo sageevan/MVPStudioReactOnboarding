@@ -1,7 +1,7 @@
 ﻿import React, { Component } from 'react';
 import { BsFillTrashFill, BsFillPencilFill } from "react-icons/bs";
 import 'bootstrap/dist/css/bootstrap.min.css';
-import $ from 'jquery'
+import $ from 'jquery';
 import Popup from '../Popup';
 import '../Components.css';
 
@@ -10,7 +10,7 @@ export class CustomerList extends Component {
 
     constructor(props) {
         super(props);
-        this.state = { createOpen: true, editOpen: false, deleteOpen: false, current: '', customers: [], loading: true, editing: false, currentPage: 1, noOfCustomersPerPage: 5, totalCustomers: 0, error: false };
+        this.state = { createOpen: true, editOpen: false, deleteOpen: false, current: '', customers: [], loading: true, editing: false, currentPage: 1, rowsPerPage: 5, totalCustomers: 0, error: false };
     }
 
     //close popup window
@@ -31,39 +31,47 @@ export class CustomerList extends Component {
         this.setState({ customers: data, loading: true, editOpen: false, createOpen: true });
     }
 
-    //Get Customer Details from Model
-    populateCustomerData(page) {
-        this.state.currentPage = page;
-        $.ajax({
-            url: '/api/Customers',
-            type: 'GET',
-            dataType: 'json',
-            success: (ajaxResult) => {
-                const indexOfLastCust = this.state.currentPage * this.state.noOfCustomersPerPage;
-                const indexOfFirstCust = indexOfLastCust - this.state.noOfCustomersPerPage;
-                const currentCustomers = ajaxResult.slice(indexOfFirstCust, indexOfLastCust);
-                this.setState({ totalCustomers: ajaxResult.length, customers: currentCustomers, loading: true });
-            },
-            error: (error) => function (request, message, error) {
-                this.handleException(request, message, error)
-            }
-        });
-
+    renderPagination(data) {
+        const indexOfLast = this.state.currentPage * this.state.rowsPerPage;
+        const indexOfFirst = indexOfLast - this.state.rowsPerPage;
+        const currentData = data.slice(indexOfFirst, indexOfLast);
+        this.setState({ totalCustomers: data.length, customers: currentData, loading: true });
     }
+
+    //Get Customer Details from Model
+    async populateCustomerData(page) {
+        this.setState({ currentPage: page})
+
+        fetch('/api/Customers')
+            .then((res) => res.json())
+            .then((data) => {
+                this.renderPagination(data)
+            })
+            .catch(error => {
+                console.error(
+                    "There has been a problem with your fetch operation for Get Customer List!",
+                    error.message
+                );
+            });
+
+
+        
+    }
+  
     noOfCustomersPerPage(noofcustomersperpage) {
-        this.setState({ noOfCustomersPerPage: noofcustomersperpage, loading: true })
+        this.setState({ rowsPerPage: noofcustomersperpage, loading: true })
         this.populateCustomerData(this.state.currentPage);
     }
 
     //pagination implementation
     pagination() {
         let pages = [];
-        for (let i = 1; i <= Math.ceil(this.state.totalCustomers / this.state.noOfCustomersPerPage); i++) {
+        for (let i = 1; i <= Math.ceil(this.state.totalCustomers / this.state.rowsPerPage); i++) {
             pages.push(i);
         }
         return (
             <div className="pagination">
-               <p><label for="noOfCustomersPerPage">Number of Customers in a page:</label>
+                <p><label for="noOfCustomersPerPage">Number of Customers in a page :&nbsp;</label>
                 
                 <select name="noOfCustomersPerPage" onChange={(e) => { this.noOfCustomersPerPage(e.target.value) }}>
                     <option>5</option>
@@ -94,7 +102,7 @@ export class CustomerList extends Component {
             this.setState({ error: true });
         }
         if (customer.name && customer.address) {
-            fetch('api/Customers', {
+            fetch('/api/Customers', {
                 method: 'post',
                 headers: new Headers({
                     'Accept': 'application/json',
@@ -102,16 +110,18 @@ export class CustomerList extends Component {
                 }),
                 body: JSON.stringify(customer)
             })
-                .then(response => response.json())
-                .then(
-                    (result) => {
-                        this.populateCustomerData(this.state.currentPage)
-                        this.setState({ loading: true, editOpen: false, createOpen: true })
-                    },
-                    (error) => {
-                        alert("Failed");
-                    }
-                );
+                .then((res) => res.json())
+                .then((data) => {
+                    console.log(data);
+                    this.setState({ loading: true, editOpen: false, createOpen: true })
+                    this.populateCustomerData(this.state.currentPage);
+                })
+                .catch(error => {
+                    console.error(
+                        "There has been a problem with your fetch operation for updating Customer!",
+                        error
+                    );
+                });
         }
     }
     //request to delete a customer 
@@ -121,24 +131,36 @@ export class CustomerList extends Component {
 
     //if confirmed by user then delete the customer
     deleteCustomer(customer) {
-        $.ajax({
-            url: '/api/Customers/' + customer.id,
-            type: 'DELETE',
-            dataType: 'json',
-            success: (ajaxResult) => {
-                this.populateCustomerData(this.state.currentPage)
+        fetch('/api/Customers/' + customer.id, {
+            method: 'DELETE',
+            headers: new Headers({
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }),
+            body: JSON.stringify(customer)
+        })
+
+            .then(response => {
                 this.setState({ loading: true, editOpen: false, createOpen: true, deleteOpen: false })
-            },
-            error: (error) => function (request, message, error) {
-                this.handleException(request, message, error)
-            }
-        });
+                this.populateCustomerData(this.state.currentPage);
+                if (!response.ok) {
+                    throw new Error("Network response was not ok");
+                }
+            })
+            .catch(error => {
+                console.error(
+                    "There has been a problem with your fetch operation for updating Customer!",
+                    error
+                );
+            });
+
     }
+    
 
     //Empty fields for create new customer
     createCustomer() {
         this.setState({
-            cretaOpen: false,
+            createOpen: false,
             editOpen: true,
             error: false,
             loading: true,
@@ -150,19 +172,6 @@ export class CustomerList extends Component {
         })
     }
 
-    //Handle exception from Ajax Call
-    static handleException(request, message, error) {
-        var msg = "";
-
-        msg += "Code: " + request.status + "\n";
-        msg += "Text: " + request.statusText + "\n";
-        if (request.responseJSON != null) {
-            msg += "Message: " +
-                request.responseJSON.Message + "\n";
-        }
-
-        alert(msg);
-    }
     //Render cutomer table for view
     static renderCustomerTable(customers, currentCustomer, ctrl, editPopup, deletePopup, error) {
         return (
@@ -212,7 +221,7 @@ export class CustomerList extends Component {
                                             {error && currentCustomer.address.length <= 0 ?
                                                 <label className="error">Address Cannot be empty*</label> : ""}
                                         </p>
-                                        <div className="submit-btn">
+                                        <div className="btn-submit">
                                             <button onClick={() => { ctrl.saveCustomer(currentCustomer) }}>Save</button>
                                             <button onClick={() => { ctrl.cancelPopup() }}>Cancel</button></div>
 
@@ -236,9 +245,9 @@ export class CustomerList extends Component {
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><div className="submit-btn">
-                                        <td><input type="button" value="Yes" onClick={() => { ctrl.deleteCustomer(currentCustomer) }} /></td>
-                                        <td><input type="button" value="No" onClick={() => { ctrl.cancelPopup() }} /></td></div>
+                                    <td><div className="btn-submit">
+                                        <td><button onClick={() => { ctrl.deleteCustomer(currentCustomer) }}>Yes</button></td>
+                                        <td><button onClick={() => { ctrl.cancelPopup() }}>No</button></td></div>
                                     </td>
                                 </tr>
                             </tbody>

@@ -3,9 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using MVPStudioReactOnboarding.Dto;
+using MVPStudioReactOnboarding.Code;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MVPStudioReactOnboarding.Models;
+using Microsoft.VisualStudio.Web.CodeGeneration.EntityFrameworkCore;
 
 namespace MVPStudioReactOnboarding.Controllers
 {
@@ -22,13 +25,21 @@ namespace MVPStudioReactOnboarding.Controllers
 
         // GET: api/Stores
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Store>>> GetStores()
+        public async Task<ActionResult<IEnumerable<StoreDto>>> GetStores()
         {
-          if (_context.Stores == null)
-          {
-              return NotFound();
-          }
-            return await _context.Stores.ToListAsync();
+            try
+            {
+                if (_context.Stores == null)
+                {
+                    return NotFound();
+                }
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            var stores = await _context.Stores.Select(s => Mapper.MapStoreDto(s)).ToListAsync();
+            return new JsonResult(stores);
         }
 
         // GET: api/Stores/5
@@ -83,22 +94,31 @@ namespace MVPStudioReactOnboarding.Controllers
         // POST: api/Stores
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Store>> PostStore(Store store)
+        public async Task<ActionResult<StoreDto>> PostStore(StoreDto store)
         {
           if (_context.Stores == null)
           {
-              return Problem("Entity set 'MvponboardingReactContext.Stores'  is null.");
+              return Problem("Entity set stores is null.");
           }
-            _context.Stores.Add(store);
+            var entity = Mapper.MapStore(store);
             try
             {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateException)
-            {
-                if (StoreExists(store.Id))
+                if (store.Id == 0)
                 {
-                    return Conflict();
+                    _context.Stores.Add(entity);
+                    await _context.SaveChangesAsync();
+                 }
+                else
+                {
+                    _context.Stores.Update(entity).State=EntityState.Modified;
+                    await _context.SaveChangesAsync();
+                }
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!StoreExists(store.Id))
+                {
+                    return Problem("Store is already Available!");
                 }
                 else
                 {
@@ -106,7 +126,8 @@ namespace MVPStudioReactOnboarding.Controllers
                 }
             }
 
-            return CreatedAtAction("GetStore", new { id = store.Id }, store);
+            return new JsonResult(Mapper.MapStoreDto(entity));
+
         }
 
         // DELETE: api/Stores/5

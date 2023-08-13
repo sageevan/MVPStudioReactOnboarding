@@ -1,4 +1,6 @@
-﻿namespace MVPStudioReactOnboarding.Dto
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel;
+namespace MVPStudioReactOnboarding.Dto
 {
     public class StoreDto
     {

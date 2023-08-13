@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using MVPStudioReactOnboarding.Dto;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using MVPStudioReactOnboarding.Code;
 using MVPStudioReactOnboarding.Models;
 
 namespace MVPStudioReactOnboarding.Controllers
@@ -22,13 +24,21 @@ namespace MVPStudioReactOnboarding.Controllers
 
         // GET: api/Products
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
+        public async Task<ActionResult<IEnumerable<ProductDto>>> GetProducts()
         {
-          if (_context.Products == null)
-          {
-              return NotFound();
-          }
-            return await _context.Products.ToListAsync();
+            try
+            {
+                if (_context.Products == null)
+                {
+                    return NotFound();
+                }
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            var products = await _context.Products.Select(p => Mapper.MapProductDto(p)).ToListAsync();
+            return new JsonResult(products);
         }
 
         // GET: api/Products/5
@@ -83,16 +93,39 @@ namespace MVPStudioReactOnboarding.Controllers
         // POST: api/Products
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Product>> PostProduct(Product product)
+        public async Task<ActionResult<ProductDto>> PostProduct(ProductDto product)
         {
-          if (_context.Products == null)
-          {
-              return Problem("Entity set 'MvponboardingReactContext.Products'  is null.");
-          }
-            _context.Products.Add(product);
-            await _context.SaveChangesAsync();
+            if (_context.Products == null)
+            {
+                return Problem("Entity set products is null.");
+            }
 
-            return CreatedAtAction("GetProduct", new { id = product.Id }, product);
+            var entity = Mapper.MapProduct(product);
+            try
+            {
+                if (product.Id == 0)
+                {
+                    _context.Products.Add(entity);
+                    await _context.SaveChangesAsync();
+                }
+                else
+                {
+                    _context.Products.Update(entity).State = EntityState.Modified;
+                    await _context.SaveChangesAsync();
+                }
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!ProductExists(product.Id))
+                {
+                    return Problem("Product is already Available!");
+                }
+                else
+                {
+                    throw;
+                }
+            }
+            return new JsonResult(Mapper.MapProductDto(entity));
         }
 
         // DELETE: api/Products/5
@@ -112,7 +145,7 @@ namespace MVPStudioReactOnboarding.Controllers
             _context.Products.Remove(product);
             await _context.SaveChangesAsync();
 
-            return NoContent();
+            return new JsonResult(Mapper.MapProductDto(product));
         }
 
         private bool ProductExists(int id)
