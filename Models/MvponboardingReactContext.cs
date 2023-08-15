@@ -54,6 +54,10 @@ public partial class MvponboardingReactContext : DbContext
                 .HasForeignKey(d => d.CustomerId)
                 .HasConstraintName("FK_Sales_Customer");
 
+            entity.HasOne(d => d.IdNavigation).WithOne(p => p.Sale)
+                .HasForeignKey<Sale>(d => d.Id)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Sales_Product");
 
             entity.HasOne(d => d.Store).WithMany(p => p.Sales)
                 .HasForeignKey(d => d.StoreId)

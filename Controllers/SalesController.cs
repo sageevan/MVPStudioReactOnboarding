@@ -91,19 +91,12 @@ namespace MVPStudioReactOnboarding.Controllers
         // POST: api/Sales
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<SaleDto>> PostSale([Bind("Id,ProductId,CustomerId,StoreId,DateSold")]SaleDto sale)
+        public async Task<ActionResult<SaleDto>> PostSale(SaleDto sale)
         {
             if (_context.Sales == null)
             {
                 return Problem("Entity set Sales is null.");
             }
-
-            //var saleMap = await _context.Sales
-            //      .Include(p => p.Product)
-            //      .Include(s => s.Store)
-            //      .Include(c => c.Customer).ToListAsync();
-
-            //var entity= sale.Select(s => Mapper.MapSale(s)).ToList();
 
             var entity = Mapper.MapSale(sale);
 
@@ -119,10 +112,6 @@ namespace MVPStudioReactOnboarding.Controllers
             }
 
             return new JsonResult(Mapper.MapSaleDto(entity));
-
-
-
-
 
         }
 

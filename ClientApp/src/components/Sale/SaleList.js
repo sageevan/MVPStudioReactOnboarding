@@ -1,7 +1,6 @@
 ﻿import React, { Component } from 'react';
 import { BsFillTrashFill, BsFillPencilFill } from "react-icons/bs";
 import 'bootstrap/dist/css/bootstrap.min.css';
-import $ from 'jquery';
 import Popup from '../Popup';
 import '../Components.css';
 
@@ -10,7 +9,7 @@ export class SaleList extends Component {
 
     constructor(props) {
         super(props);
-        this.state = { createOpen: true, editOpen: false, deleteOpen: false, current: '', sales: [], loading: true, editing: false, currentPage: 1, rowsPerPage: 5, totalSales: 0, error: false };
+        this.state = { customerNames: '', productNames :'', storeNames:'', createOpen: true, editOpen: false, deleteOpen: false, current: '', sales: [], loading: true, editing: false, currentPage: 1, rowsPerPage: 5, totalSales: 0, error: false };
     }
 
     //close popup window
@@ -90,8 +89,28 @@ export class SaleList extends Component {
     }
 
     updateSale(sale) {
-        this.setState({ editOpen: true, current: sale, loading: true, createOpen: false })
-    }
+
+        Promise.all([
+            fetch('/api/Customers'),
+            fetch('/api/products'),
+            fetch('/api/stores')
+        ]).then(async([res1,res2,res3]) => {
+            const customernames = await res1.json();
+            const productnames = await res2.json();
+            const storenames = await res3.json();
+            this.setState({
+                customerNames: customernames, productNames: productnames, storeNames: storenames, editOpen: true, current: sale, loading: true, createOpen: false
+            })
+        })
+                .catch(error => {
+                    console.error(
+                        "There has been a problem with retrieving data Customers, Products and Stores!",
+                        error
+                    );
+                })
+        }
+        
+    
 
     saveSale(sale) {
         if (sale) {
@@ -149,6 +168,7 @@ export class SaleList extends Component {
     }
 
     createSale() {
+        console.log(this.state.current);
         this.setState({
             createOpen: false,
             editOpen: true,
@@ -165,7 +185,7 @@ export class SaleList extends Component {
     }
 
 
-    static renderSaleTable(sales, currentSale, ctrl, editPopup, deletePopup, error) {
+    static renderSaleTable(customerNames, productNames, storeNames, sales, currentSale, ctrl, editPopup, deletePopup, error) {
         console.log(currentSale);
         return (
             <div>
@@ -210,14 +230,14 @@ export class SaleList extends Component {
                                 <tr key={currentSale.id}>
                                     <td>
                                         <p> <input type="hidden" value={currentSale.id} name="saleId" /></p>
-                                        <p><select name="customername" defaultValue={currentSale.customerName} onChange={(event) => { currentSale.customerName = event.target.value; }}>
-                                            {sales?.map(s => <option key={s.customerName} value={s.customerName}>{s.customerName}</option>)}
+                                        <p><select className="customername" defaultValue={currentSale.customerName} onChange={(event) => { currentSale.customerName = event.target.value; }}>
+                                            {customerNames?.map(c => <option>{c.name}</option>)}
                                         </select> </p>
                                         <p><select name="productname" defaultValue={currentSale.productName} onChange={(event) => { currentSale.productName = event.target.value; }}>
-                                            {sales?.map(s => <option key={s.productName} value={s.productName}>{s.productName}</option>)}
+                                            {productNames?.map(p => <option>{p.name}</option>)}
                                         </select> </p>
                                         <p><select name="storename" defaultValue={currentSale.storeName} onChange={(event) => { currentSale.storeName = event.target.value; }}>
-                                            {sales?.map(s => <option key={s.storeName} value={s.storeName}>{s.storeName}</option>)}
+                                            {storeNames?.map(s => <option>{s.name}</option>)}
                                         </select> </p>
                                         <p><input type="date" name="datesold" onChange={(event) => { currentSale.dateSold = event.target.value; }}></input> </p>
 
@@ -263,7 +283,7 @@ export class SaleList extends Component {
 
     render() {
         let contents = this.state.loading
-            ? SaleList.renderSaleTable(this.state.sales, this.state.current, this, this.state.editOpen, this.state.deleteOpen, this.state.error)
+            ? SaleList.renderSaleTable(this.state.customerNames, this.state.productNames, this.state.storeNames, this.state.sales, this.state.current, this, this.state.editOpen, this.state.deleteOpen, this.state.error)
             : SaleList.pagination();
 
 

@@ -1,5 +1,6 @@
 ﻿using MVPStudioReactOnboarding.Models;
 using MVPStudioReactOnboarding.Dto;
+using Microsoft.EntityFrameworkCore;
 
 namespace MVPStudioReactOnboarding.Code
 {
@@ -13,7 +14,7 @@ namespace MVPStudioReactOnboarding.Code
             {
                 sale = new Dto.SaleDto
                 {
-                    SaleAmount = Sale?.Product.Price,
+                //    SaleAmount = Sale?.Product.Price,
                     Id = Sale.Id,
                     CustomerName = Sale?.Customer.Name,
                     ProductName = Sale.Product.Name,
@@ -23,20 +24,26 @@ namespace MVPStudioReactOnboarding.Code
             }
             return sale;
         }
-        public static Models.Sale MapSale(SaleDto Sale)
+        public static Models.Sale MapSale(SaleDto saleDto)
         {
-            var sale = new Models.Sale();
-            if (Sale != null)
+            if (saleDto == null)
             {
-                sale.Customer.Name = Sale.CustomerName;
-                sale.Product.Name = Sale.ProductName;
-                sale.Store.Name= Sale.StoreName;
-                sale.DateSold = Sale.DateSold;
-                sale.Product.Price = Sale.SaleAmount;
-             }
+                return null; // or throw an exception if appropriate
+            }
+            var sale = new Sale
+            {
+                Id = saleDto.Id,
+                Customer = new Customer { Name = saleDto.CustomerName },
+                Product = new Product { Name = saleDto.ProductName, Price = saleDto.SaleAmount },
+                Store = new Store { Name = saleDto.StoreName },
+                DateSold = saleDto.DateSold
+            };
+
             return sale;
         }
-        public static Models.Customer MapCustomer(CustomerDto Customer)
+
+   
+    public static Models.Customer MapCustomer(CustomerDto Customer)
         {
             var customer = new Models.Customer();
             if (Customer != null)

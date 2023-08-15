@@ -112,6 +112,15 @@ ul li a:before {
     font-weight: bold;
 }
 
+    .popup-title select{
+        width:100px;
+        background-color:red;
+    }
+
+.customername {
+    width: 200px;
+}
+
 .popup {
     position: fixed;
     z-index: 1;
