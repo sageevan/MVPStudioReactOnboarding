@@ -9,7 +9,7 @@ export class SaleList extends Component {
 
     constructor(props) {
         super(props);
-        this.state = { customerNames: '', productNames :'', storeNames:'', createOpen: true, editOpen: false, deleteOpen: false, current: '', sales: [], loading: true, editing: false, currentPage: 1, rowsPerPage: 5, totalSales: 0, error: false };
+        this.state = { customerNames: '', productNames :'', storeNames:'',createbtnshow:true, createOpen: false, editOpen: false, deleteOpen: false, current: '', sales: [], loading: true, editing: false, currentPage: 1, rowsPerPage: 5, totalSales: 0, error: false };
     }
 
     //close popup window
@@ -17,7 +17,7 @@ export class SaleList extends Component {
         //e.preventDefault();
         this.populateSaleData(this.state.currentPage);
         this.setState({
-            editOpen: false, createOpen: true, deleteOpen: false
+            editOpen: false, createbtnshow: true, deleteOpen: false, createOpen:false
         });
     }
 
@@ -26,7 +26,7 @@ export class SaleList extends Component {
         this.populateSaleData(this.state.currentPage);
     }
     renderSales(data) {
-        this.setState({ sales: data, loading: true, editOpen: false, createOpen: true });
+        this.setState({ sales: data, loading: true, editOpen: false, createbtnshow: true });
     }
     renderPagination(data) {
         const indexOfLast = this.state.currentPage * this.state.rowsPerPage;
@@ -37,7 +37,7 @@ export class SaleList extends Component {
 
     async populateSaleData(page) {
         this.setState({ currentPage: page })
-
+        //Get method to retrieve data from Controller
         fetch('/api/sales')
             .then((res) => res.json())
             .then((data) => {
@@ -51,7 +51,24 @@ export class SaleList extends Component {
                 );
             });
 
-
+        Promise.all([
+            fetch('/api/Customers'),
+            fetch('/api/products'),
+            fetch('/api/stores')
+        ]).then(async ([res1, res2, res3]) => {
+            const customernames = await res1.json();
+            const productnames = await res2.json();
+            const storenames = await res3.json();
+            this.setState({
+                customerNames: customernames, productNames: productnames, storeNames: storenames, editOpen: false, loading: true, createbtnshow: true
+            })
+        })
+            .catch(error => {
+                console.error(
+                    "There has been a problem with retrieving data Customers, Products and Stores!",
+                    error
+                );
+            })
 
     }
 
@@ -89,30 +106,18 @@ export class SaleList extends Component {
     }
 
     updateSale(sale) {
-
-        Promise.all([
-            fetch('/api/Customers'),
-            fetch('/api/products'),
-            fetch('/api/stores')
-        ]).then(async([res1,res2,res3]) => {
-            const customernames = await res1.json();
-            const productnames = await res2.json();
-            const storenames = await res3.json();
-            this.setState({
-                customerNames: customernames, productNames: productnames, storeNames: storenames, editOpen: true, current: sale, loading: true, createOpen: false
-            })
+        console.log(sale);
+        this.setState({
+            editOpen: true, current: sale, loading: true, createbtnshow: false
         })
-                .catch(error => {
-                    console.error(
-                        "There has been a problem with retrieving data Customers, Products and Stores!",
-                        error
-                    );
-                })
-        }
+    }
         
     
 
     saveSale(sale) {
+        console.log(sale.customerId);
+        console.log(sale.customerId);
+        console.log(sale);
         if (sale) {
             fetch('/api/sales', {
                 method: 'post',
@@ -125,7 +130,7 @@ export class SaleList extends Component {
                 .then((res) => res.json())
                 .then((data) => {
                     console.log(data);
-                    this.setState({ loading: true, editOpen: false, createOpen: true })
+                    this.setState({ loading: true, editOpen: false, createbtnshow: true, createOpen:false })
                     this.populateSaleData(this.state.currentPage);
                 })
                 .catch(error => {
@@ -138,7 +143,7 @@ export class SaleList extends Component {
     }
 
     deleteSaleRequest(sale) {
-        this.setState({ current: sale, deleteOpen: true, loading: true, createOpen: true })
+        this.setState({ current: sale, deleteOpen: true, loading: true, createbtnshow: true })
     }
 
     deleteSale(sale) {
@@ -152,7 +157,7 @@ export class SaleList extends Component {
         })
 
             .then(response => {
-                this.setState({ loading: true, editOpen: false, createOpen: true, deleteOpen: false })
+                this.setState({ loading: true, editOpen: false, createbtnshow: true, deleteOpen: false })
                 this.populateSaleData(this.state.currentPage);
                 if (!response.ok) {
                     throw new Error("Network response was not ok");
@@ -168,24 +173,29 @@ export class SaleList extends Component {
     }
 
     createSale() {
-        console.log(this.state.current);
+
+       console.log(this.state.current);
         this.setState({
-            createOpen: false,
-            editOpen: true,
+            createbtnshow: false,
+            createOpen:true,
+            editOpen: false,
             error: false,
             loading: true,
             current: {
-                saleId: 0,
-                productname: '',
-                customername: '',
-                storname: '',
-                datesold: ''
+                id: 0,
+                productName: '',
+                productId : '',
+                customerName: '',
+                customerId: '',
+                storeName: '',
+                storeId: '',
+                dateSold: ''
             }
         })
     }
 
 
-    static renderSaleTable(customerNames, productNames, storeNames, sales, currentSale, ctrl, editPopup, deletePopup, error) {
+    static renderSaleTable(customerNames, productNames, storeNames, sales, currentSale, ctrl,createPopup, editPopup, deletePopup, error) {
         console.log(currentSale);
         return (
             <div>
@@ -229,17 +239,63 @@ export class SaleList extends Component {
                             <tbody>
                                 <tr key={currentSale.id}>
                                     <td>
-                                        <p> <input type="hidden" value={currentSale.id} name="saleId" /></p>
-                                        <p><select className="customername" defaultValue={currentSale.customerName} onChange={(event) => { currentSale.customerName = event.target.value; }}>
-                                            {customerNames?.map(c => <option>{c.name}</option>)}
+                                        <p> <input type="hidden" value={currentSale.id} name="id" /></p>
+                                        <p><select className="customerName" defaultValue={currentSale.customerId} onChange={(e) => { currentSale.customerId = e.target.value }}>
+                                            {customerNames?.map(c => (<option value={c.id} key={c.id}>{c.name}</option>))}
                                         </select> </p>
-                                        <p><select name="productname" defaultValue={currentSale.productName} onChange={(event) => { currentSale.productName = event.target.value; }}>
-                                            {productNames?.map(p => <option>{p.name}</option>)}
+                                        <p><select name="productName" defaultValue={currentSale.productId} onChange={(e) => { currentSale.productId = e.target.value }}>
+                                            {productNames?.map(p => <option value={p.id} key={p.id}>{p.name}</option>)}
                                         </select> </p>
-                                        <p><select name="storename" defaultValue={currentSale.storeName} onChange={(event) => { currentSale.storeName = event.target.value; }}>
-                                            {storeNames?.map(s => <option>{s.name}</option>)}
+                                        <p><select name="storeName" defaultValue={currentSale.storeId} onChange={(e) => { currentSale.storeId = e.target.value }}>
+                                            {storeNames?.map(s => <option value={s.id} key={s.id}>{s.name}</option>)}
                                         </select> </p>
-                                        <p><input type="date" name="datesold" onChange={(event) => { currentSale.dateSold = event.target.value; }}></input> </p>
+                                        <p><input type="date" name="dateSold" onChange={(e) => { currentSale.dateSold = e.target.value; }}></input> </p>
+
+                                        <div className="btn-submit">
+                                            <button onClick={() => { ctrl.saveSale(currentSale) }}>Save</button>
+                                            <button onClick={() => { ctrl.cancelPopup() }}>Cancel</button></div>
+
+                                    </td>
+                                </tr>
+                            </tbody>
+
+                        </table>
+                    </Popup>
+                )}
+
+                {createPopup && (
+                    <Popup trigger={createPopup}>
+                        <table className='table table-striped' aria-labelledby="tabelLabel">
+
+                            <thead>
+                                <tr>
+                                    <th className="popup-title">Sale Details</th>
+
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr key={currentSale.id}>
+                                    <td>
+                                        <p> <input type="hidden" value={currentSale.id} name="id" /></p>
+                                        <p><select className="customerId" onChange={(e) => { currentSale.customerId = e.target.value }}>
+                                            <option defaultValue hidden>
+                                                {'Select Customer'}
+                                            </option>
+                                            {customerNames?.map(c => <option value={c.id}>{c.name}</option>)}
+                                        </select> </p>
+                                        <p><select name="productId" onChange={(e) => { currentSale.productId = e.target.value }}>
+                                            <option defaultValue hidden>
+                                                {'Select Product'}
+                                            </option>
+                                            {productNames?.map(p => <option value={p.id}>{p.name}</option>)}
+                                        </select> </p>
+                                        <p><select name="storeId" onChange={(e) => { currentSale.storeId = e.target.value }}>
+                                            <option defaultValue hidden>
+                                                {'Select Store'}
+                                            </option>
+                                            {storeNames?.map(s => <option value={s.id }>{s.name}</option>)}
+                                        </select> </p>
+                                        <p><input type="date" name="dateSold" placeholder="Select Date" onChange={(e) => { currentSale.dateSold = e.target.value; }}></input> </p>
 
                                         <div className="btn-submit">
                                             <button onClick={() => { ctrl.saveSale(currentSale) }}>Save</button>
@@ -283,7 +339,7 @@ export class SaleList extends Component {
 
     render() {
         let contents = this.state.loading
-            ? SaleList.renderSaleTable(this.state.customerNames, this.state.productNames, this.state.storeNames, this.state.sales, this.state.current, this, this.state.editOpen, this.state.deleteOpen, this.state.error)
+            ? SaleList.renderSaleTable(this.state.customerNames, this.state.productNames, this.state.storeNames, this.state.sales, this.state.current, this, this.state.createOpen, this.state.editOpen, this.state.deleteOpen, this.state.error)
             : SaleList.pagination();
 
 
@@ -292,7 +348,7 @@ export class SaleList extends Component {
                 <div className="table-title">
                     <h3 >Sales Details</h3></div>
                 {contents}
-                {this.state.createOpen ?
+                {this.state.createbtnshow ?
                     <button className="btn-create-new" onClick={() => { this.createSale() }}>Create New</button>
                     : null
                 }

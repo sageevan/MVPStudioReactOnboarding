@@ -1,6 +1,8 @@
 ﻿using MVPStudioReactOnboarding.Models;
 using MVPStudioReactOnboarding.Dto;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace MVPStudioReactOnboarding.Code
 {
@@ -16,9 +18,12 @@ namespace MVPStudioReactOnboarding.Code
                 {
                 //    SaleAmount = Sale?.Product.Price,
                     Id = Sale.Id,
-                    CustomerName = Sale?.Customer.Name,
-                    ProductName = Sale.Product.Name,
-                    StoreName = Sale.Store.Name,
+                    CustomerName = Sale.Customer?.Name,
+                    CustomerId = (int)Sale.CustomerId,
+                    ProductName = Sale.Product?.Name,
+                    ProductId = (int)Sale.ProductId,
+                    StoreName = Sale.Store?.Name,
+                    StoreId = (int)Sale.StoreId,
                     DateSold = Sale.DateSold,
                 };
             }
@@ -33,12 +38,16 @@ namespace MVPStudioReactOnboarding.Code
             var sale = new Sale
             {
                 Id = saleDto.Id,
-                Customer = new Customer { Name = saleDto.CustomerName },
-                Product = new Product { Name = saleDto.ProductName, Price = saleDto.SaleAmount },
-                Store = new Store { Name = saleDto.StoreName },
+                //CustomerId = new Customer
+                CustomerId =saleDto.CustomerId,
+                ProductId=saleDto.ProductId,
+                StoreId=saleDto.StoreId,
+                
+                ////     Product = new Product { Name = saleDto.ProductName, Price = saleDto.SaleAmount },
+                //Product = new Product { Name = saleDto.ProductName },
+                //Store = new Store { Name = saleDto.StoreName },
                 DateSold = saleDto.DateSold
             };
-
             return sale;
         }
 

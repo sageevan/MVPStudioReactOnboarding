@@ -5,8 +5,14 @@ namespace MVPStudioReactOnboarding.Dto
     public class SaleDto
     {
         public int Id { get; set; }
-        public decimal? SaleAmount { get; set; }
+     //   public decimal? SaleAmount { get; set; }
         public String ProductName { get; set; } = string.Empty;
+
+        public int ProductId { get; set; }
+
+        public int CustomerId { get; set; }
+
+        public int StoreId { get; set; }
 
         public String CustomerName { get; set; } = string.Empty;
 

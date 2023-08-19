@@ -102,8 +102,16 @@ namespace MVPStudioReactOnboarding.Controllers
 
             if (sale.Id == 0)
             {
-                _context.Sales.Add(entity);
-                await _context.SaveChangesAsync();
+                try
+                {
+                    _context.Sales.Add(entity);
+                    await _context.SaveChangesAsync();
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(ex.Message);
+                }
+
             }
             else
             {
