@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Azure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -32,13 +33,14 @@ namespace MVPStudioReactOnboarding.Controllers
                 {
                     return NotFound();
                 }
+                var customers = await _context.Customers.Select(s => Mapper.MapCustomerDto(s)).ToListAsync();
+                return new JsonResult(customers);
             }
             catch (Exception ex)
             {
                 return BadRequest(ex.Message);
             }
-                var customers = await _context.Customers.Select(s => Mapper.MapCustomerDto(s)).ToListAsync();
-                return new JsonResult(customers);
+                
         }
 
         // GET: api/Customers/5
@@ -101,19 +103,35 @@ namespace MVPStudioReactOnboarding.Controllers
             }
 
             var entity = Mapper.MapCustomer(customer);
-
-            if (customer.Id == 0)
+            try
             {
-                _context.Customers.Add(entity);
-                await _context.SaveChangesAsync();
+                if (customer.Id == 0)
+                {
+                    if ((bool)(!_context.Customers.Any(c => c.Name == customer.Name && c.Address == customer.Address)))
+                    {
+                        _context.Customers.Add(entity);
+                        await _context.SaveChangesAsync();
+                        return new JsonResult(Mapper.MapCustomerDto(entity));
+                    }
+                 }
+                else
+                {
+                    if ((bool)(!_context.Customers.Any(c => c.Name == customer.Name && c.Address == customer.Address)))
+                    {
+                        _context.Customers.Update(entity).State = EntityState.Modified;
+                        await _context.SaveChangesAsync();
+                        return new JsonResult(Mapper.MapCustomerDto(entity));
+
+                    }
+                }
+                return NotFound(); 
             }
-            else
+            catch (Exception ex)
             {
-                _context.Customers.Update(entity).State = EntityState.Modified;
-                await _context.SaveChangesAsync();
+                return BadRequest(ex.Message);
             }
 
-             return new JsonResult(Mapper.MapCustomerDto(entity));
+ 
         }
 
         // DELETE: api/Customers/5
@@ -122,18 +140,27 @@ namespace MVPStudioReactOnboarding.Controllers
         {
             if (_context.Customers == null)
             {
-                return NotFound();
+                return Problem("Entity set Customers is null.");
             }
             var customer = await _context.Customers.FindAsync(id);
             if (customer == null)
             {
-                return NotFound();
+                return Problem("Entity set Customers is null.");
             }
 
-            _context.Customers.Remove(customer);
-            await _context.SaveChangesAsync();
-
-            return new JsonResult(Mapper.MapCustomerDto(customer));
+            try
+            {
+                if ((bool)(_context.Customers.Any(c => c.Id == customer.Id)))
+                {
+                    _context.Customers.Remove(customer);
+                    await _context.SaveChangesAsync();
+                    return new JsonResult(Mapper.MapCustomerDto(customer));
+                }
+                return NotFound();
+            }catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         private bool CustomerExists(int id)

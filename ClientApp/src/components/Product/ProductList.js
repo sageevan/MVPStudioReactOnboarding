@@ -1,8 +1,7 @@
 ﻿import React, { Component } from 'react';
 import { BsFillTrashFill, BsFillPencilFill } from "react-icons/bs";
 import 'bootstrap/dist/css/bootstrap.min.css';
-import $ from 'jquery';
-import Popup from '../Popup';
+import { Popup } from '../Utils';
 import '../Components.css';
 
 export class ProductList extends Component {
@@ -92,7 +91,6 @@ export class ProductList extends Component {
     }
 
     saveProduct(product) {
-        console.log(product);
         if (product.name.length == 0 || product.price >= 0) {
             this.setState({ error: true });
         }
@@ -107,7 +105,6 @@ export class ProductList extends Component {
             })
                 .then((res) => res.json())
                 .then((data) => {
-                    console.log(data);
                     this.setState({ loading: true, editOpen: false, createOpen: true })
                     this.populateProductData(this.state.currentPage);
                 })

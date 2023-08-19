@@ -1,8 +1,7 @@
 ﻿import React, { Component } from 'react';
 import { BsFillTrashFill, BsFillPencilFill } from "react-icons/bs";
 import 'bootstrap/dist/css/bootstrap.min.css';
-import $ from 'jquery';
-import Popup from '../Popup';
+import {Popup} from '../Utils';
 import '../Components.css';
 
 export class StoreList extends Component {
@@ -106,7 +105,6 @@ export class StoreList extends Component {
             })
                 .then((res) => res.json())
                 .then((data) => {
-                    console.log(data);
                     this.setState({ loading: true, editOpen: false, createOpen: true })
                     this.populateStoreData(this.state.currentPage);
                 })
@@ -160,7 +158,6 @@ export class StoreList extends Component {
                 address: ''
             }
         })
-        console.log(this.state.current.storeId);
     }
 
     static renderStoreTable(stores, currentStore, ctrl, editPopup, deletePopup, error) {

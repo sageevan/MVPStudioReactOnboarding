@@ -1,7 +1,7 @@
 ﻿import React, { Component } from 'react';
 import { BsFillTrashFill, BsFillPencilFill } from "react-icons/bs";
+import { formatDate, Popup } from '../Utils'
 import 'bootstrap/dist/css/bootstrap.min.css';
-import Popup from '../Popup';
 import '../Components.css';
 
 export class SaleList extends Component {
@@ -41,7 +41,6 @@ export class SaleList extends Component {
         fetch('/api/sales')
             .then((res) => res.json())
             .then((data) => {
-                console.log(data);
                 this.renderPagination(data)
             })
             .catch(error => {
@@ -106,7 +105,6 @@ export class SaleList extends Component {
     }
 
     updateSale(sale) {
-        console.log(sale);
         this.setState({
             editOpen: true, current: sale, loading: true, createbtnshow: false
         })
@@ -115,9 +113,6 @@ export class SaleList extends Component {
     
 
     saveSale(sale) {
-        console.log(sale.customerId);
-        console.log(sale.customerId);
-        console.log(sale);
         if (sale) {
             fetch('/api/sales', {
                 method: 'post',
@@ -129,8 +124,7 @@ export class SaleList extends Component {
             })
                 .then((res) => res.json())
                 .then((data) => {
-                    console.log(data);
-                    this.setState({ loading: true, editOpen: false, createbtnshow: true, createOpen:false })
+                    this.setState({ loading: true, editOpen: false, createbtnshow: true, createOpen: false })
                     this.populateSaleData(this.state.currentPage);
                 })
                 .catch(error => {
@@ -173,8 +167,7 @@ export class SaleList extends Component {
     }
 
     createSale() {
-
-       console.log(this.state.current);
+        let currentDate = new Date();
         this.setState({
             createbtnshow: false,
             createOpen:true,
@@ -189,14 +182,13 @@ export class SaleList extends Component {
                 customerId: '',
                 storeName: '',
                 storeId: '',
-                dateSold: ''
+                dateSold: currentDate
             }
         })
     }
 
 
     static renderSaleTable(customerNames, productNames, storeNames, sales, currentSale, ctrl,createPopup, editPopup, deletePopup, error) {
-        console.log(currentSale);
         return (
             <div>
                 <table className='table table-striped' aria-labelledby="tabelLabel">
@@ -216,7 +208,7 @@ export class SaleList extends Component {
                                 <td>{sale.customerName}</td>
                                 <td>{sale.productName}</td>
                                 <td>{sale.storeName}</td>
-                                <td>{sale.dateSold}</td>
+                                <td>{formatDate(new Date(sale.dateSold))}</td>
                                 <td><button className="btn-edit" onClick={() => { ctrl.updateSale(sale) }}><BsFillPencilFill /></button></td>
                                 <td><button className="btn-delete" onClick={() => { ctrl.deleteSaleRequest(sale) }}><BsFillTrashFill /></button></td>
                             </tr>
@@ -249,7 +241,7 @@ export class SaleList extends Component {
                                         <p><select name="storeName" defaultValue={currentSale.storeId} onChange={(e) => { currentSale.storeId = e.target.value }}>
                                             {storeNames?.map(s => <option value={s.id} key={s.id}>{s.name}</option>)}
                                         </select> </p>
-                                        <p><input type="date" name="dateSold" onChange={(e) => { currentSale.dateSold = e.target.value; }}></input> </p>
+                                        <p><input type="date" defaultValue={formatDate(new Date(currentSale.dateSold))} name="dateSold" onChange={(e) => { currentSale.dateSold = e.target.value; }}></input> </p>
 
                                         <div className="btn-submit">
                                             <button onClick={() => { ctrl.saveSale(currentSale) }}>Save</button>
@@ -281,21 +273,20 @@ export class SaleList extends Component {
                                             <option defaultValue hidden>
                                                 {'Select Customer'}
                                             </option>
-                                            {customerNames?.map(c => <option value={c.id}>{c.name}</option>)}
+                                            {customerNames?.map(c => <option value={c.id} key={c.id}>{c.name}</option>)}
                                         </select> </p>
                                         <p><select name="productId" onChange={(e) => { currentSale.productId = e.target.value }}>
                                             <option defaultValue hidden>
                                                 {'Select Product'}
                                             </option>
-                                            {productNames?.map(p => <option value={p.id}>{p.name}</option>)}
+                                            {productNames?.map(p => <option value={p.id} key={p.id}>{p.name}</option>)}
                                         </select> </p>
                                         <p><select name="storeId" onChange={(e) => { currentSale.storeId = e.target.value }}>
                                             <option defaultValue hidden>
                                                 {'Select Store'}
                                             </option>
-                                            {storeNames?.map(s => <option value={s.id }>{s.name}</option>)}
+                                            {storeNames?.map(s => <option value={s.id} key={s.id}>{s.name}</option>)}
                                         </select> </p>
-                                        <p><input type="date" name="dateSold" placeholder="Select Date" onChange={(e) => { currentSale.dateSold = e.target.value; }}></input> </p>
 
                                         <div className="btn-submit">
                                             <button onClick={() => { ctrl.saveSale(currentSale) }}>Save</button>

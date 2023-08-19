@@ -38,14 +38,9 @@ namespace MVPStudioReactOnboarding.Code
             var sale = new Sale
             {
                 Id = saleDto.Id,
-                //CustomerId = new Customer
                 CustomerId =saleDto.CustomerId,
                 ProductId=saleDto.ProductId,
                 StoreId=saleDto.StoreId,
-                
-                ////     Product = new Product { Name = saleDto.ProductName, Price = saleDto.SaleAmount },
-                //Product = new Product { Name = saleDto.ProductName },
-                //Store = new Store { Name = saleDto.StoreName },
                 DateSold = saleDto.DateSold
             };
             return sale;

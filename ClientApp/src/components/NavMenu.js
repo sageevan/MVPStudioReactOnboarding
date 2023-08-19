@@ -24,8 +24,11 @@ export class NavMenu extends Component {
     render() {
         return (
             <header>
+                <div class="container">
+                    <a class="navbar-brand text-center center-block" href="#">React Project</a>
+                </div>
                 <Navbar className="navbar-expand-sm navbar-toggleable-sm ng-white border-bottom box-shadow mb-3" container light>
-                    <NavbarBrand tag={Link} to="/">React Project</NavbarBrand>
+                    
                     <NavbarToggler onClick={this.toggleNavbar} className="mr-2" />
                     <Collapse className="d-sm-inline-flex" isOpen={!this.state.collapsed} navbar>
                         <ul className="navbar-nav flex-grow">
