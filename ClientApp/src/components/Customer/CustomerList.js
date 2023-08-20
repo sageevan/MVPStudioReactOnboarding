@@ -10,12 +10,17 @@ export class CustomerList extends Component {
 
     constructor(props) {
         super(props);
-        this.state = { setShowMesssage:true, createOpen: true, editOpen: false, deleteOpen: false, current: '', customers: [], loading: true, editing: false, currentPage: 1, rowsPerPage: 5, totalCustomers: 0,errorUser:false, errorServer:false, errorMessage: '', successMessage :''};
+        this.state = {
+            createOpen: true, editOpen: false, deleteOpen: false,
+            current: '', customers: [],
+            loading: true, editing: false,
+            currentPage: 1, rowsPerPage: 5, totalCustomers: 0,
+            errorUser: false, errorServer: false, errorMessage: '', successMessage: ''
+        };
     }
 
     //close popup window
     cancelPopup() {
-        //e.preventDefault();
         this.populateCustomerData(this.state.currentPage);
         this.setState({
             editOpen: false, createOpen: true, deleteOpen: false
@@ -26,7 +31,7 @@ export class CustomerList extends Component {
         this.populateCustomerData(this.state.currentPage);
     }
 
-    //Render the Customer data from model to view
+    //Render the Customers data from model to view
     renderCustomers(data) {
         this.setState({ customers: data, loading: true, editOpen: false, createOpen: true });
     }
@@ -39,33 +44,38 @@ export class CustomerList extends Component {
         this.setState({ totalCustomers: data.length, customers: currentData, loading: true });
     }
 
-    //Get Customer Details from Controller
+    //Retrieve Customer Details from Controller
     async populateCustomerData(page) {
+        $("#loading-error").hide();
         this.setState({ currentPage: page })
         fetch('/api/Customers')
             .then((res) => {
                 if (!res.ok) {
+
+
                     this.setState({ errorServer: true })
                     throw error("There has been a problem with fetching Customers!");
+                    
                 }
                 return res.json();
             })
             .then((data) => {
+                $("#loading-error").hide();
+                $("#loading").fadeOut(1000);
                 this.renderPagination(data)
             })
             .catch(error => {
+                $("#loading").fadeOut(1000);
+                $("#loading-error").show();
                 console.error(
+                    'Could not connect server to get customer details '+
                     error.message
                 );
             });
 
-      //  this.userMessageHandle();
-        $("#success-message").show();
-
-        
     }
 
-    //Assign number of customer per page when user select
+    //Assign number of customers per page when user select
     noOfCustomersPerPage(noofcustomersperpage) {
         this.setState({ rowsPerPage: noofcustomersperpage, loading: true })
         this.populateCustomerData(this.state.currentPage);
@@ -81,41 +91,55 @@ export class CustomerList extends Component {
 
             <div className="pagination">
                 <p><label for="noOfCustomersPerPage"></label>
-                
-                <select name="noOfCustomersPerPage" onChange={(e) => { this.noOfCustomersPerPage(e.target.value) }}>
-                    <option>5</option>
-                    <option>10</option>
-                    <option>20</option>
-                    <option>50</option>
+
+                    <select name="noOfCustomersPerPage" onChange={(e) => { this.noOfCustomersPerPage(e.target.value) }}>
+                        <option>5</option>
+                        <option>10</option>
+                        <option>20</option>
+                        <option>50</option>
                     </select>
 
-                {
-                    pages.map((page, index) => {
-                        return <button key={index} onClick={() => { this.populateCustomerData(page) }}>{page}</button>
-                    })
+                    {
+                        pages.map((page, index) => {
+                            return <button key={index} onClick={() => { this.populateCustomerData(page) }}>{page}</button>
+                        })
                     }
-                    </p>
+                </p>
             </div>
 
         )
     }
 
+    //Handle errors for users
+    userMessageHandler(message) {
+         if (message == "#success-message") {
+            $("#success-error").hide();
+            $(message).show();
+            $(message).fadeOut(2000);
+        } else if (message == "#error-message") {
+            $("#success-message").hide();
+            $(message).show();
+            $(message).fadeOut(2000);
+        } else {
+            $("#success-message").hide();
+            $("#error-message").hide();
+        }
+    }
 
-    //Get the cutomer to be edited and render to edittable
+
+    //Get the product to be edited and render to edittable
     updateCustomer(customer) {
-        this.setState({ editOpen: true, current: customer, loading: true, createOpen: false })
-        $("#success-message").fadeOut(1000);
+        this.setState({ editOpen: true, current: customer, loading: true, createOpen: false, errorServer: false })
     }
 
     //update current customer or create new customer
     saveCustomer(customer) {
-        $("#success-message").fadeOut(1000);
         if (customer.name.length == 0 || customer.address.length == 0) {
             this.setState({ errorUser: true });
         }
         if (customer.name && customer.address) {
             if (customer.name.match(/^[A-Za-z\s]*$/)) {
-                fetch('/api/Customers', {
+                fetch('/api/Customer', {
                     method: 'post',
                     headers: new Headers({
                         'Accept': 'application/json',
@@ -124,22 +148,20 @@ export class CustomerList extends Component {
                     body: JSON.stringify(customer)
                 })
                     .then((res) => {
-                        if (res.ok) {
-
+                        if (!res.ok) {
+                            if ((res.status == 500)) {
+                                this.setState({ errorMessage: 'Customer Already Avaialable!' })
+                                this.userMessageHandler("#error-message");
+                                console.error("Customer Already available to update/add!");
+                            }
+                            
+                        } else {
                             if (customer.id > 0) {
                                 this.setState({ successMessage: 'Customer Details Successfully Updated!' });
-                                $("#success-message").show();
+                                this.userMessageHandler("#success-message");
                             } else {
                                 this.setState({ successMessage: 'Customer Details Successfully Created!' });
-                                $("#success-message").show();
-                            }
-                        } else {
-                            if ((res.status == 404)) {
-                                this.setState({ errorMessage: 'Customer Already Avaialable!' })
-                            }
-                            else {
-                                this.setState({ errorServer: true })
-                                throw error("There has been a problem with your fetch operation for updating Customer!");
+                                this.userMessageHandler("#success-message");
                             }
                         }
                         return res.json();
@@ -151,27 +173,27 @@ export class CustomerList extends Component {
                         this.populateCustomerData(this.state.currentPage);
                     })
                     .catch(error => {
+                        this.setState({ errorServer: true })
                         console.error(
+                            'Could not connect to the server for update/add customer request'+''+
                             error.message
                         );
                     });
-                
+
             } else {
-                console.error("number or special charactors found in name");
+                console.error("Number or special charactors found in customer name!");
                 this.setState({ errorUser: true });
             }
         }
-        
+
     }
     //request to delete a customer 
     deleteCustomerRequest(customer) {
-        this.setState({ current: customer, deleteOpen: true, loading: true, createOpen: true })
-        $("#error-message").css('visibility', 'visible');
+        this.setState({ current: customer, deleteOpen: true, loading: true, createOpen: true, errorServer: false })
     }
 
     //if confirmed by user then delete the customer
     deleteCustomer(customer) {
-        $("#success-message").fadeOut(1000);
         fetch('/api/Customers/' + customer.id, {
             method: 'DELETE',
             headers: new Headers({
@@ -183,28 +205,32 @@ export class CustomerList extends Component {
 
             .then(res => {
                 if (res.ok) {
-                    
-                    this.setState({ successMessage: 'Customer Deleted Successfully!', loading: true, editOpen: false, createOpen: true, deleteOpen: false})
+
+                    this.setState({ successMessage: 'Customer Deleted Successfully!', loading: true, editOpen: false, createOpen: true, deleteOpen: false })
                     this.populateCustomerData(this.state.currentPage);
+                    this.userMessageHandler("#success-message");
                 }
                 else {
-                    if ((res.status == 404)) {
-                        this.setState({ errorMessage: 'Customer Not Available to delete!' })
+                    if ((res.status == 500)) {
+                        this.setState({ errorMessage: 'Customer already been deleted!' })
+                        this.userMessageHandler("#error-message");
+                        this.cancelPopup();
+                        throw error('Customer has been already deleted');
                     }
                     else {
-                        this.setState({ errorServer: true, editOpen:false })
-                        throw error("There has been a problem with your fetch operation for updating Customer!");
+                        this.setState({ errorServer: true, editOpen: false })
+                        throw error('Could not connect to the server for delete customer request');
                     }
                 }
             })
             .catch(error => {
-                console.error(
+                console.error(                    
                     error.message
                 );
             });
 
     }
-    
+
 
     //Empty fields for create new customer
     createCustomer() {
@@ -212,6 +238,7 @@ export class CustomerList extends Component {
             createOpen: false,
             editOpen: true,
             errorUser: false,
+            errorServer: false,
             loading: true,
             current: {
                 customerId: 0,
@@ -221,31 +248,31 @@ export class CustomerList extends Component {
         })
     }
 
-    //Render cutomer table for view
+    //Render customer table for view
     static renderCustomerTable(customers, currentCustomer, ctrl, editPopup, deletePopup, error) {
-
-        return (
-                     
+         return (
+            
             <table className='table table-striped' aria-labelledby="tabelLabel">
-
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Address</th>
-                            <th>Edit</th>
-                            <th>Delete</th>
+                <div id="loading" className="loading">Loading Customers....</div>
+                <div id="loading-error" className="loading-error">Failed to Load Customers! check server connection.</div>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Address</th>
+                        <th>Edit</th>
+                        <th>Delete</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {customers?.map(customer =>
+                        <tr key={customer.id}>
+                            <td>{customer.name}</td>
+                            <td>{customer.address}</td>
+                            <td><button className="btn-edit" onClick={() => { ctrl.updateCustomer(customer) }}><BsFillPencilFill /></button></td>
+                            <td><button className="btn-delete" onClick={() => { ctrl.deleteCustomerRequest(customer) }}><BsFillTrashFill /></button></td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        {customers?.map(customer =>
-                            <tr key={customer.id}>
-                                <td>{customer.name}</td>
-                                <td>{customer.address}</td>
-                                <td><button className="btn-edit" onClick={() => { ctrl.updateCustomer(customer, ctrl.state.successMessage='b') }}><BsFillPencilFill /></button></td>
-                                <td><button className="btn-delete" onClick={() => { ctrl.deleteCustomerRequest(customer) }}><BsFillTrashFill /></button></td>
-                            </tr>
-                        )}
-                    </tbody>
+                    )}
+                </tbody>
 
                 {editPopup && (
                     <Popup trigger={editPopup}>
@@ -255,7 +282,7 @@ export class CustomerList extends Component {
                                 <tr>
                                     <th className="popup-title">Customer Details</th>
                                 </tr>
-                            {ctrl.state.errorServer
+                                {ctrl.state.errorServer
                                     ? <div className="error">Server Connection failed!</div> : ""}
                             </thead>
                             <tbody>
@@ -266,7 +293,7 @@ export class CustomerList extends Component {
                                             <input type="text" placeholder="Enter Customer Name" defaultValue={currentCustomer.name} contentEditable name="name" onChange={(event) => { currentCustomer.name = event.target.value; }} />
                                             {error && currentCustomer.name.length <= 0
                                                 ? <label className="error">Name cannot be empty* </label> : ""}
-                                            {error && currentCustomer.name.length >= 0 && !currentCustomer.name.match(/^[A-Za-z\s]*$/) 
+                                            {error && currentCustomer.name.length >= 0 && !currentCustomer.name.match(/^[A-Za-z\s]*$/)
                                                 ? <label className="error">Name cannot contains numbers or Special Charactors* </label> : ""}
                                         </p>
                                         <p><label>Customer Address :</label>
@@ -290,17 +317,19 @@ export class CustomerList extends Component {
                     <Popup trigger={deletePopup}>
                         <table className='table table-striped' aria-labelledby="tabelLabel">
 
-                            <thead>
+                             <thead>
+                                 {ctrl.state.errorServer
+                                     ? <div className="error">Server Connection failed!</div> : ""}
                                 <tr>
-                                    <th>Do you want to delete details for customer : {currentCustomer.name}</th>
+                                    <th>Do you want to delete the customer : {currentCustomer.name}</th>
 
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
                                     <td><div className="btn-submit">
-                                        <td><button onClick={() => { ctrl.deleteCustomer(currentCustomer) }}>Yes</button></td>
-                                        <td><button onClick={() => { ctrl.cancelPopup() }}>No</button></td></div>
+                                        <td><button className="btn-delete-yes" onClick={() => { ctrl.deleteCustomer(currentCustomer) }}>Yes</button></td>
+                                        <td><button className="btn-delete-no" onClick={() => { ctrl.cancelPopup() }}>No</button></td></div>
                                     </td>
                                 </tr>
                             </tbody>
@@ -322,9 +351,10 @@ export class CustomerList extends Component {
             <div>
                 <div className="content-title">
                     <h2 >Customer Details</h2></div>
-                    <hr></hr>
-                {   <div>      < div id = "success-message" className = "success-message" > { this.state.successMessage }</div > 
-                <div id="error-message" className="error-message">{this.state.errorMessage}</div></div>}
+                
+                <hr></hr>
+                {<div>      < div id="success-message" className="success-message" > {this.state.successMessage}</div >
+                    <div id="error-message" className="error-message">{this.state.errorMessage}</div></div>}
                 {contents}
                 {this.state.createOpen ?
                     <button className="btn-create-new" onClick={() => { this.createCustomer() }}>Create New</button>

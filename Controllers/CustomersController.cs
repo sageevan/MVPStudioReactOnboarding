@@ -124,7 +124,7 @@ namespace MVPStudioReactOnboarding.Controllers
 
                     }
                 }
-                return NotFound(); 
+                return Problem("Customer Already available.");
             }
             catch (Exception ex)
             {
@@ -145,7 +145,7 @@ namespace MVPStudioReactOnboarding.Controllers
             var customer = await _context.Customers.FindAsync(id);
             if (customer == null)
             {
-                return Problem("Entity set Customers is null.");
+                return Problem("Customer Not available to delete.");
             }
 
             try

@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MVPStudioReactOnboarding.Code;
 using MVPStudioReactOnboarding.Models;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace MVPStudioReactOnboarding.Controllers
 {
@@ -31,24 +32,26 @@ namespace MVPStudioReactOnboarding.Controllers
                 if (_context.Products == null)
                 {
                     return NotFound();
+
                 }
+                var products = await _context.Products.Select(p => Mapper.MapProductDto(p)).ToListAsync();
+                return new JsonResult(products);
             }
             catch (Exception ex)
             {
                 return BadRequest(ex.Message);
             }
-            var products = await _context.Products.Select(p => Mapper.MapProductDto(p)).ToListAsync();
-            return new JsonResult(products);
+
         }
 
         // GET: api/Products/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Product>> GetProduct(int id)
         {
-          if (_context.Products == null)
-          {
-              return NotFound();
-          }
+            if (_context.Products == null)
+            {
+                return NotFound();
+            }
             var product = await _context.Products.FindAsync(id);
 
             if (product == null)
@@ -105,27 +108,29 @@ namespace MVPStudioReactOnboarding.Controllers
             {
                 if (product.Id == 0)
                 {
-                    _context.Products.Add(entity);
-                    await _context.SaveChangesAsync();
+                    if ((bool)(!_context.Products.Any(p => p.Name == product.Name && p.Price == product.Price)))
+                    {
+                        _context.Products.Add(entity);
+                        await _context.SaveChangesAsync();
+                        return new JsonResult(Mapper.MapProductDto(entity));
+                    }
                 }
                 else
                 {
-                    _context.Products.Update(entity).State = EntityState.Modified;
-                    await _context.SaveChangesAsync();
+                    if ((bool)(!_context.Products.Any(p => p.Name == product.Name && p.Price == product.Price)))
+                    {
+                        _context.Products.Update(entity).State = EntityState.Modified;
+                        await _context.SaveChangesAsync();
+                        return new JsonResult(Mapper.MapProductDto(entity));
+
+                    }
                 }
+                return Problem("Product Already available.");
             }
-            catch (DbUpdateConcurrencyException)
+            catch (Exception ex)
             {
-                if (!ProductExists(product.Id))
-                {
-                    return Problem("Product is already Available!");
-                }
-                else
-                {
-                    throw;
-                }
+                return BadRequest(ex.Message);
             }
-            return new JsonResult(Mapper.MapProductDto(entity));
         }
 
         // DELETE: api/Products/5
@@ -134,18 +139,28 @@ namespace MVPStudioReactOnboarding.Controllers
         {
             if (_context.Products == null)
             {
-                return NotFound();
+                return Problem("Entity set Products is null.");
             }
             var product = await _context.Products.FindAsync(id);
             if (product == null)
             {
-                return NotFound();
+                return Problem("Product Not Available to delete.");
             }
 
-            _context.Products.Remove(product);
-            await _context.SaveChangesAsync();
-
-            return new JsonResult(Mapper.MapProductDto(product));
+            try
+            {
+                if ((bool)(_context.Products.Any(p => p.Id == product.Id)))
+                {
+                    _context.Products.Remove(product);
+                    await _context.SaveChangesAsync();
+                    return new JsonResult(Mapper.MapProductDto(product));
+                }
+                return NotFound();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         private bool ProductExists(int id)

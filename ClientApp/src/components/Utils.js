@@ -19,3 +19,24 @@ export function formatDate(_date) {
     return formattedDate;
 }
 
+
+export function checkCurrencyFormat(price) {
+    let count = 0;
+
+    // looping through the items
+    for (let i = 0; i < price.length; i++) {
+
+        // check if the character is at that position
+        if (price.charAt(i) == '.') {
+            count += 1;
+        }
+    }
+    console.log(count);
+    if (count == 1 && /^(\d+.)*(\d+)$/.test(price)) {
+        return false;
+    } else {
+        return true;
+    }
+
+}
+

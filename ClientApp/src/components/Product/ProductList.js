@@ -1,7 +1,8 @@
 ﻿import React, { Component } from 'react';
 import { BsFillTrashFill, BsFillPencilFill } from "react-icons/bs";
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { Popup } from '../Utils';
+import $, { error } from 'jquery';
+import { Popup, checkCurrencyFormat } from '../Utils';
 import '../Components.css';
 
 export class ProductList extends Component {
@@ -9,12 +10,17 @@ export class ProductList extends Component {
 
     constructor(props) {
         super(props);
-        this.state = { createOpen: true, editOpen: false, deleteOpen: false, current: '', products: [], loading: true, editing: false, currentPage: 1, rowsPerPage: 5, totalProducts: 0, error: false };
+        this.state = {
+            createOpen: true, editOpen: false, deleteOpen: false,
+            current: '', products: [],
+            loading: true, editing: false,
+            currentPage: 1, rowsPerPage: 5, totalProducts: 0,
+            errorUser: false, errorServer: false, errorMessage: '', successMessage: ''
+        };
     }
 
     //close popup window
     cancelPopup() {
-        //e.preventDefault();
         this.populateProductData(this.state.currentPage);
         this.setState({
             editOpen: false, createOpen: true, deleteOpen: false
@@ -25,6 +31,7 @@ export class ProductList extends Component {
         this.populateProductData(this.state.currentPage);
     }
 
+    //Render the Products data from model to view
     renderProducts(data) {
         this.setState({ products: data, loading: true, editOpen: false, createOpen: true });
     }
@@ -36,24 +43,35 @@ export class ProductList extends Component {
         this.setState({ totalProducts: data.length, products: currentData, loading: true });
     }
 
-    async  populateProductData(page) {
-        this.setState({ currentPage: page})
+    //retrieve Product Details from controller
+    async populateProductData(page) {
+        $("#loading-error").hide();
+        this.setState({ currentPage: page })
         fetch('/api/products')
-            .then((res) => res.json())
+            .then((res) => {
+                if (!res.ok) {
+                    this.setState({ errorServer: true })
+                    throw error("There has been a problem with fetching Products!");
+                }
+                return res.json();
+            })
             .then((data) => {
-                this.renderPagination(data);
+                $("#loading-error").hide();
+                $("#loading").fadeOut(1000);
+                this.renderPagination(data)
             })
             .catch(error => {
+                $("#loading").fadeOut(1000);
+                $("#loading-error").show();
                 console.error(
-                    "There has been a problem with your fetch operation for Get Customer List!",
+                    'Could not connect server to get product details ' +
                     error.message
                 );
             });
-            
-            
-        }
 
-    
+    }
+
+     //Assign number of products per page when user select
     noOfProductsPerPage(noofproductsperpage) {
         this.setState({ rowsPerPage: noofproductsperpage, loading: true })
         this.populateProductData(this.state.currentPage);
@@ -67,7 +85,7 @@ export class ProductList extends Component {
         }
         return (
             <div className="pagination">
-                <p><label for="noOfProductsPerPage">Number of Products in a page :&nbsp;</label>
+                <p><label for="noOfProductsPerPage"></label>
 
                     <select name="noOfProductsPerPage" onChange={(e) => { this.noOfProductsPerPage(e.target.value) }}>
                         <option>5</option>
@@ -76,7 +94,6 @@ export class ProductList extends Component {
                         <option>50</option>
                     </select>
 
-                    <br></br>
                     {
                         pages.map((page, index) => {
                             return <button key={index} onClick={() => { this.populateProductData(page) }}>{page}</button>
@@ -86,39 +103,86 @@ export class ProductList extends Component {
             </div>
         )
     }
-    updateProduct(product) {
-        this.setState({ editOpen: true, current: product, loading: true, createOpen: false })
+
+    //Handle errors for users
+    userMessageHandler(message) {
+        if (message == "#success-message") {
+            $("#success-error").hide();
+            $(message).show();
+            $(message).fadeOut(2000);
+        } else if (message == "#error-message") {
+            $("#success-message").hide();
+            $(message).show();
+            $(message).fadeOut(2000);
+        } else {
+            $("#success-message").hide();
+            $("#error-message").hide();
+        }
     }
 
+     //Get the product to be edited and render to edittable
+    updateProduct(product) {
+        this.setState({ editOpen: true, current: product, loading: true, createOpen: false, errorUser:false, errorServer: false })
+    }
+
+    //update current product or create new customer
     saveProduct(product) {
-        if (product.name.length == 0 || product.price >= 0) {
-            this.setState({ error: true });
+        if (product.name.length == 0 || product.price <= 0 || checkCurrencyFormat(product.price)) {
+            this.setState({ errorUser: true});
         }
-        if (product.name && product.price) {
-            fetch('/api/products', {
-                method: 'POST',
-                headers: new Headers({
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                }),
-                body: JSON.stringify(product)
-            })
-                .then((res) => res.json())
-                .then((data) => {
-                    this.setState({ loading: true, editOpen: false, createOpen: true })
-                    this.populateProductData(this.state.currentPage);
+        else if (product.name && product.price) {
+            if (product.name.match(/^[A-Za-z\s]*$/)) {
+                fetch('/api/products', {
+                    method: 'POST',
+                    headers: new Headers({
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }),
+                    body: JSON.stringify(product)
                 })
-                .catch(error => {
-                    console.error(
-                        "There has been a problem with your fetch operation for updating Customer!",
-                        error
-                    );
-                });
+                    .then((res) => {
+                        if (!res.ok) {
+                            if ((res.status == 500)) {
+                                this.setState({ errorMessage: 'Product Already Avaialable!' })
+                                this.userMessageHandler("#error-message");
+                                console.error("Product Already available to update/add!");
+                                                            }
+                            } else {
+                            if (product.id > 0) {
+                                this.setState({ successMessage: 'Product Details Successfully Updated!' });
+                                this.userMessageHandler("#success-message");
+                            } else {
+                                this.setState({ successMessage: 'Product Details Successfully Created!' });
+                                this.userMessageHandler("#success-message");
+                            }
+                        } 
+                        return res.json();
+                    })
+
+                    .then((data) => {
+                        this.setState({ loading: true, editOpen: false, createOpen: true })
+                        this.populateProductData(this.state.currentPage);
+                    })
+                    .catch(error => {
+                        this.setState({ errorServer: true })
+                        console.error(
+                            'Could not connect to the server for update/add product request' + '' +
+                            error.message
+                        );
+                    });
+            }else {
+                console.error("Letters or special charactors found in product price!");
+                this.setState({ errorUser: true });
+            }
         }
     }
+
+    //request to delete a product
     deleteProductRequest(product) {
-        this.setState({ current: product, deleteOpen: true, loading: true, createOpen: true })
+        this.setState({ current: product, deleteOpen: true, loading: true, createOpen: true,errorUser:false, errorServer: false })
     }
+
+    //after the confirmation from user, delete the product
     deleteProduct(product) {
         fetch('/api/products/' + product.id, {
             method: 'DELETE',
@@ -129,26 +193,43 @@ export class ProductList extends Component {
             body: JSON.stringify(product)
         })
 
-            .then(response => {
-                this.setState({ loading: true, editOpen: false, createOpen: true, deleteOpen: false })
-                this.populateProductData(this.state.currentPage);
-                if (!response.ok) {
-                    throw new Error("Network response was not ok");
+            .then(res => {
+                if (res.ok) {
+
+                    this.setState({ successMessage: 'Product Deleted Successfully!', loading: true, editOpen: false, createOpen: true, deleteOpen: false })
+                    this.populateProductData(this.state.currentPage);
+                    this.userMessageHandler("#success-message");
+                }
+                else {
+                    if ((res.status == 500)) {
+                        this.setState({ errorMessage: 'Product already been deleted!' })
+                        this.userMessageHandler("#error-message");
+                        this.cancelPopup();
+                        throw error('Product has been already deleted');
+                    }
+                    else {
+                        this.setState({ errorServer: true, editOpen: false })
+                        throw error("Could not connect to the server for deleting product!");
+                    }
                 }
             })
             .catch(error => {
+                this.setState({ errorServer: true })
                 console.error(
-                    "There has been a problem with your fetch operation for updating Product!",
-                    error
+                    error.message
                 );
             });
 
-   }
+    }
+
+
+    //Empty fields for create new product
     createProduct() {
         this.setState({
             createOpen: false,
             editOpen: true,
-            error: false,
+            errorUser: false,
+            errorServer:false,
             loading: true,
             current: {
                 productId: 0,
@@ -158,10 +239,12 @@ export class ProductList extends Component {
         })
     }
 
+    //Render product table for view
     static renderProductTable(products, currentProduct, ctrl, editPopup, deletePopup, error) {
         return (
-            <div>
-                <table className='table table-striped' aria-labelledby="tabelLabel">
+            <table className='table table-striped' aria-labelledby="tabelLabel">
+                <div id="loading" className="loading">Loading Products....</div>
+                <div id="loading-error" className="loading-error">Failed to Load Products! check server connection.</div>
                     <thead>
                         <tr>
                             <th>Name</th>
@@ -174,14 +257,13 @@ export class ProductList extends Component {
                         {products?.map(product =>
                             <tr key={product.id}>
                                 <td>{product.name}</td>
-                                <td>{product.price}</td>
+                               {/* <td>{new Intl.NumberFormat().format(product.price)}</td>*/}
+                                <td>{((product.price).toFixed(2).replace(',', '.').replace(/\B(?=(\d{3})+(?!\d))/g, "."))}</td>
                                 <td><button className="btn-edit" onClick={() => { ctrl.updateProduct(product) }}><BsFillPencilFill /></button></td>
                                 <td><button className="btn-delete" onClick={() => { ctrl.deleteProductRequest(product) }}><BsFillTrashFill /></button></td>
                             </tr>
                         )}
                     </tbody>
-                    <table className='table table-striped' aria-labelledby="tabelLabel"></table>
-                </table>
 
 
                 {editPopup && (
@@ -193,18 +275,27 @@ export class ProductList extends Component {
                                     <th className="popup-title">Product Details</th>
 
                                 </tr>
+                                {ctrl.state.errorServer
+                                    ? <div className="error">Server Connection failed!</div> : ""}
                             </thead>
                             <tbody>
                                 <tr key={currentProduct.id}>
                                     <td>
                                         <p> <input type="hidden" value={currentProduct.id} name="productId" /></p>
-                                        <p><input type="text" placeholder="Product Name" defaultValue={currentProduct.name} contentEditable name="name" onChange={(event) => { currentProduct.name = event.target.value; }} />
+                                        <p><label> Product Name : </label>
+                                        <input type="text" placeholder="Enter Product Name" defaultValue={currentProduct.name} contentEditable name="name" onChange={(event) => { currentProduct.name = event.target.value; }} />
                                             {error && currentProduct.name.length <= 0 ?
-                                                <label className="error">Name cannot be empty* </label> : ""}
-                                        </p>
-                                        <p><input type="text" placeholder="Product Price" defaultValue={currentProduct.price} name="price" onChange={(event) => { currentProduct.price = event.target.value; }} />
-                                            {error && currentProduct.price.length <= 0 ?
-                                                <label className="error">Price Cannot be empty*</label> : ""}
+                                                    <label className="error">Name cannot be empty* </label> : ""}
+                                                {error && currentProduct.name.length >= 0 && !currentProduct.name.match(/^[A-Za-z\s]*$/)
+                                                    ? <label className="error">Name cannot contains numbers or Special Charactors* </label> : ""}
+                                            </p>
+                                            <p><label>Product Price($) :</label>
+                                        <input type="text" placeholder="Enter Product Price" defaultValue={currentProduct.price} name="price" onChange={(event) => { currentProduct.price = event.target.value; }} />
+                                            {error && currentProduct.price <= 0 ?
+                                                <label className="error">Price value cannot be $0*</label> : ""}
+                                            {error && checkCurrencyFormat(currentProduct.price)
+                                                ? <label className="error">Enter the Currency format(00.00)* </label> : ""}
+                                            
                                         </p>
                                         <div className="btn-submit">
                                             <button onClick={() => { ctrl.saveProduct(currentProduct) }}>Save</button>
@@ -223,6 +314,8 @@ export class ProductList extends Component {
                         <table className='table table-striped' aria-labelledby="tabelLabel">
 
                             <thead>
+                                {ctrl.state.errorServer
+                                    ? <div className="error">Server Connection failed!</div> : ""}
                                 <tr>
                                     <th>Do you want to delete product: {currentProduct.name}</th>
 
@@ -240,20 +333,23 @@ export class ProductList extends Component {
                         </table>
                     </Popup>
                 )}
-            </div>
+                </table>
         );
     }
 
     render() {
         let contents = this.state.loading
-            ? ProductList.renderProductTable(this.state.products, this.state.current, this, this.state.editOpen, this.state.deleteOpen, this.state.error)
+            ? ProductList.renderProductTable(this.state.products, this.state.current, this, this.state.editOpen, this.state.deleteOpen, this.state.errorUser)
             : ProductList.pagination();
 
 
         return (
             <div>
-                <div className="table-title">
+                <div className="content-title">
                     <h3 >Product Details</h3></div>
+                <hr></hr>
+                {<div>      < div id="success-message" className="success-message" > {this.state.successMessage}</div >
+                    <div id="error-message" className="error-message">{this.state.errorMessage}</div></div>}
                 {contents}
                 {this.state.createOpen ?
                     <button className="btn-create-new" onClick={() => { this.createProduct() }}>Create New</button>

@@ -8,11 +8,14 @@
     background-color: #b7b5b5;
 }
 
-
-a.navbar-brand {
+.navbar-header{
+    margin-top:10%;
+}
+.navbar-brand {
+    margin-left: 30%;
+    align-items: center;
+    justify-content: center;
     padding: 0px 0px 0px 0px;
-    align-content: center;
-    text-align: center;
     font-size: 30px;
     font-weight: bold;
 }
@@ -29,24 +32,24 @@ a.navbar-brand {
     border-radius: 25px;
     margin: 0px 10px 20px 15px;
     font-size: 18px;
-    width: 100%;
+    width: 70%;
     border: 2px solid #dddfe2;
     height: 52px;
     text-align: center;
     font-weight: bold;
 }
 
-ul li a {
-    display: block;
-    position: relative;
-    text-decoration: none;
-    padding: 5px;
-    font-size: 18px;
-    font-family: sans-serif;
-    color: #fff;
-    text-transform: uppercase;
-    transition: 0.5s;
-}
+    ul li a {
+        display: block;
+        position: relative;
+        text-decoration: none;
+        padding: 5px;
+        font-size: 18px;
+        font-family: sans-serif;
+        color: #fff;
+        text-transform: uppercase;
+        transition: 0.5s;
+    }
 
 ul:hover li a {
     opacity: 1;
@@ -79,7 +82,9 @@ ul li a:before {
     text-align: center;
     font-weight: bold;
 }
-
+.loading-error{
+    color:red;
+}
 .success-message {
     visibility: initial;
     color: green;
@@ -119,18 +124,25 @@ ul li a:before {
     color: #ff4c5c;
     margin-left: 10px;
 }
-
-
-.popup {
-    position: fixed;
-    z-index: 1;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: auto;
-    background-color: rgba(0,0,0,0.4);
+.btn-delete-yes{
+    color:red;
 }
+    .btn-delete-yes:hover{
+    }
+    .btn-delete-no {
+        color: green;
+    }
+
+    .popup {
+        position: fixed;
+        z-index: 1;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.4);
+    }
 
 .popup-inner {
     max-width: 350px;
