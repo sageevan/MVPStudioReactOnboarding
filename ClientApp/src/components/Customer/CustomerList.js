@@ -51,11 +51,14 @@ export class CustomerList extends Component {
         fetch('/api/Customers')
             .then((res) => {
                 if (!res.ok) {
-
-
-                    this.setState({ errorServer: true })
-                    throw error("There has been a problem with fetching Customers!");
-                    
+                    if (res.status == 404) {
+                        this.setState({ errorServer: true })
+                        throw error("Empty List of Customers!");
+                    }
+                    else {
+                        this.setState({ errorServer: true })
+                        throw error("There has been a problem with fetching Customers!");
+                    }
                 }
                 return res.json();
             })
@@ -127,7 +130,7 @@ export class CustomerList extends Component {
     }
 
 
-    //Get the product to be edited and render to edittable
+    //Get the customer to be edited and render to edittable
     updateCustomer(customer) {
         this.setState({ editOpen: true, current: customer, loading: true, createOpen: false, errorServer: false })
     }
@@ -139,7 +142,7 @@ export class CustomerList extends Component {
         }
         if (customer.name && customer.address) {
             if (customer.name.match(/^[A-Za-z\s]*$/)) {
-                fetch('/api/Customer', {
+                fetch('/api/Customers', {
                     method: 'post',
                     headers: new Headers({
                         'Accept': 'application/json',
@@ -169,7 +172,7 @@ export class CustomerList extends Component {
 
 
                     .then((data) => {
-                        this.setState({ loading: true, editOpen: false, createOpen: true })
+                        this.setState({loading: true, editOpen: false, createOpen: true })
                         this.populateCustomerData(this.state.currentPage);
                     })
                     .catch(error => {
@@ -211,11 +214,16 @@ export class CustomerList extends Component {
                     this.userMessageHandler("#success-message");
                 }
                 else {
-                    if ((res.status == 500)) {
+                    if ((res.status == 404)) {
                         this.setState({ errorMessage: 'Customer already been deleted!' })
                         this.userMessageHandler("#error-message");
                         this.cancelPopup();
                         throw error('Customer has been already deleted');
+                    }else if ((res.status == 500)) {
+                        this.setState({ errorMessage: 'Customer involved in sale cannot be deleted!' })
+                        this.userMessageHandler("#error-message");
+                        this.cancelPopup();
+                        throw error('Customer involved in sale cannot be deleted!');
                     }
                     else {
                         this.setState({ errorServer: true, editOpen: false })
@@ -254,7 +262,7 @@ export class CustomerList extends Component {
             
             <table className='table table-striped' aria-labelledby="tabelLabel">
                 <div id="loading" className="loading">Loading Customers....</div>
-                <div id="loading-error" className="loading-error">Failed to Load Customers! check server connection.</div>
+                 <div id="loading-error" className="loading-error">Failed to Load Customers! check server connection Or empty data.</div>
                 <thead>
                     <tr>
                         <th>Name</th>
@@ -281,9 +289,11 @@ export class CustomerList extends Component {
                             <thead>
                                 <tr>
                                     <th className="popup-title">Customer Details</th>
-                                </tr>
+                                 </tr>
+                                
                                 {ctrl.state.errorServer
-                                    ? <div className="error">Server Connection failed!</div> : ""}
+                                     ? <div className="error">Server Connection failed!</div> : ""}
+                                 
                             </thead>
                             <tbody>
                                 <tr key={currentCustomer.id}>
@@ -320,16 +330,16 @@ export class CustomerList extends Component {
                              <thead>
                                  {ctrl.state.errorServer
                                      ? <div className="error">Server Connection failed!</div> : ""}
-                                <tr>
-                                    <th>Do you want to delete the customer : {currentCustomer.name}</th>
+                                 <tr>
+                                     <th className="delete-confirm">Do you want to delete the customer : {currentCustomer.name}</th>
 
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><div className="btn-submit">
-                                        <td><button className="btn-delete-yes" onClick={() => { ctrl.deleteCustomer(currentCustomer) }}>Yes</button></td>
-                                        <td><button className="btn-delete-no" onClick={() => { ctrl.cancelPopup() }}>No</button></td></div>
+                                    <td><div className="delete-btn-submit">
+                                        <td><button onClick={() => { ctrl.deleteCustomer(currentCustomer) }}>Yes</button></td>
+                                        <td><button onClick={() => { ctrl.cancelPopup() }}>No</button></td></div>
                                     </td>
                                 </tr>
                             </tbody>
@@ -353,7 +363,7 @@ export class CustomerList extends Component {
                     <h2 >Customer Details</h2></div>
                 
                 <hr></hr>
-                {<div>      < div id="success-message" className="success-message" > {this.state.successMessage}</div >
+                {<div>< div id="success-message" className="success-message" > {this.state.successMessage}</div >
                     <div id="error-message" className="error-message">{this.state.errorMessage}</div></div>}
                 {contents}
                 {this.state.createOpen ?

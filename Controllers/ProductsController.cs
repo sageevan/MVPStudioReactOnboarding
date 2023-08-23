@@ -139,17 +139,21 @@ namespace MVPStudioReactOnboarding.Controllers
         {
             if (_context.Products == null)
             {
-                return Problem("Entity set Products is null.");
+                return NotFound();
             }
             var product = await _context.Products.FindAsync(id);
             if (product == null)
             {
-                return Problem("Product Not Available to delete.");
+                return NotFound();
             }
 
             try
             {
-                if ((bool)(_context.Products.Any(p => p.Id == product.Id)))
+                if (_context.Sales.Any(s => s.ProductId == product.Id))
+                {
+                    return Problem("Product connot be deleted when involved in a sale.");
+                }
+                else if ((bool)(_context.Products.Any(p => p.Id == product.Id)))
                 {
                     _context.Products.Remove(product);
                     await _context.SaveChangesAsync();

@@ -140,17 +140,20 @@ namespace MVPStudioReactOnboarding.Controllers
         {
             if (_context.Customers == null)
             {
-                return Problem("Entity set Customers is null.");
+                return NotFound();
             }
             var customer = await _context.Customers.FindAsync(id);
             if (customer == null)
             {
-                return Problem("Customer Not available to delete.");
+                return NotFound();
             }
 
             try
             {
-                if ((bool)(_context.Customers.Any(c => c.Id == customer.Id)))
+                if(_context.Sales.Any(s => s.CustomerId == customer.Id)) {
+                    return Problem("Customer connot be deleted when involved in a sale.");
+                }
+                else if ((bool)(_context.Customers.Any(c => c.Id == customer.Id)))
                 {
                     _context.Customers.Remove(customer);
                     await _context.SaveChangesAsync();

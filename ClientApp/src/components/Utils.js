@@ -31,7 +31,6 @@ export function checkCurrencyFormat(price) {
             count += 1;
         }
     }
-    console.log(count);
     if (count == 1 && /^(\d+.)*(\d+)$/.test(price)) {
         return false;
     } else {
@@ -40,3 +39,6 @@ export function checkCurrencyFormat(price) {
 
 }
 
+export function formatCurrency(price) { 
+    return Number(price).toFixed(2).replace(',', '.').replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}

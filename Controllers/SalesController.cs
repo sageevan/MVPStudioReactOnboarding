@@ -134,7 +134,7 @@ namespace MVPStudioReactOnboarding.Controllers
             var sale = await _context.Sales.FindAsync(id);
             if (sale == null)
             {
-                return NotFound();
+                Problem("Sales Already been deleted!.");
             }
 
             _context.Sales.Remove(sale);

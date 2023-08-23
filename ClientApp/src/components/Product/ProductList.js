@@ -2,7 +2,7 @@
 import { BsFillTrashFill, BsFillPencilFill } from "react-icons/bs";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import $, { error } from 'jquery';
-import { Popup, checkCurrencyFormat } from '../Utils';
+import { Popup, checkCurrencyFormat, formatCurrency } from '../Utils';
 import '../Components.css';
 
 export class ProductList extends Component {
@@ -177,6 +177,7 @@ export class ProductList extends Component {
         }
     }
 
+
     //request to delete a product
     deleteProductRequest(product) {
         this.setState({ current: product, deleteOpen: true, loading: true, createOpen: true,errorUser:false, errorServer: false })
@@ -201,11 +202,16 @@ export class ProductList extends Component {
                     this.userMessageHandler("#success-message");
                 }
                 else {
-                    if ((res.status == 500)) {
+                    if ((res.status == 404)) {
                         this.setState({ errorMessage: 'Product already been deleted!' })
                         this.userMessageHandler("#error-message");
                         this.cancelPopup();
                         throw error('Product has been already deleted');
+                    } else if ((res.status == 500)) {
+                        this.setState({ errorMessage: 'Product involved in sale cannot be deleted!' })
+                        this.userMessageHandler("#error-message");
+                        this.cancelPopup();
+                        throw error('Product involved in sale cannot be deleted!');
                     }
                     else {
                         this.setState({ errorServer: true, editOpen: false })
@@ -257,8 +263,8 @@ export class ProductList extends Component {
                         {products?.map(product =>
                             <tr key={product.id}>
                                 <td>{product.name}</td>
-                               {/* <td>{new Intl.NumberFormat().format(product.price)}</td>*/}
-                                <td>{((product.price).toFixed(2).replace(',', '.').replace(/\B(?=(\d{3})+(?!\d))/g, "."))}</td>
+                                {/* <td>{new Intl.NumberFormat().format(product.price)}</td>*/}
+                                <td>{formatCurrency(product.price)}</td>
                                 <td><button className="btn-edit" onClick={() => { ctrl.updateProduct(product) }}><BsFillPencilFill /></button></td>
                                 <td><button className="btn-delete" onClick={() => { ctrl.deleteProductRequest(product) }}><BsFillTrashFill /></button></td>
                             </tr>
@@ -289,12 +295,12 @@ export class ProductList extends Component {
                                                 {error && currentProduct.name.length >= 0 && !currentProduct.name.match(/^[A-Za-z\s]*$/)
                                                     ? <label className="error">Name cannot contains numbers or Special Charactors* </label> : ""}
                                             </p>
-                                            <p><label>Product Price($) :</label>
-                                        <input type="text" placeholder="Enter Product Price" defaultValue={currentProduct.price} name="price" onChange={(event) => { currentProduct.price = event.target.value; }} />
+                                        <p><label>Product Price($) :</label>
+                                            <input type="text" placeholder="Enter Product Price" defaultValue={currentProduct.price} name="price" onChange={(event) => { currentProduct.price = event.target.value; }} />
                                             {error && currentProduct.price <= 0 ?
                                                 <label className="error">Price value cannot be $0*</label> : ""}
                                             {error && checkCurrencyFormat(currentProduct.price)
-                                                ? <label className="error">Enter the Currency format(00.00)* </label> : ""}
+                                                ? <label className="error">Enter the Currency format(0.00)* </label> : ""}
                                             
                                         </p>
                                         <div className="btn-submit">
@@ -317,13 +323,13 @@ export class ProductList extends Component {
                                 {ctrl.state.errorServer
                                     ? <div className="error">Server Connection failed!</div> : ""}
                                 <tr>
-                                    <th>Do you want to delete product: {currentProduct.name}</th>
+                                    <th className="delete-confirm">Do you want to delete product: {currentProduct.name}</th>
 
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><div className="btn-submit">
+                                    <td><div className="delete-btn-submit">
                                         <td><button onClick={() => { ctrl.deleteProduct(currentProduct) }}>Yes</button></td>
                                         <td><button onClick={() => { ctrl.cancelPopup() }}>No</button></td></div>
                                     </td>

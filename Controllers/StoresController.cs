@@ -105,28 +105,29 @@ namespace MVPStudioReactOnboarding.Controllers
             {
                 if (store.Id == 0)
                 {
-                    _context.Stores.Add(entity);
-                    await _context.SaveChangesAsync();
-                 }
+                    if ((bool)(!_context.Stores.Any(c => c.Name == store.Name && c.Address == store.Address)))
+                    {
+                        _context.Stores.Add(entity);
+                        await _context.SaveChangesAsync();
+                        return new JsonResult(Mapper.MapStoreDto(entity));
+                    }
+                    }
                 else
                 {
-                    _context.Stores.Update(entity).State=EntityState.Modified;
+                    if ((bool)(!_context.Customers.Any(c => c.Name == store.Name && c.Address == store.Address)))
+                    {
+                        _context.Stores.Update(entity).State=EntityState.Modified;
                     await _context.SaveChangesAsync();
-                }
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!StoreExists(store.Id))
-                {
-                    return Problem("Store is already Available!");
-                }
-                else
-                {
-                    throw;
-                }
-            }
+                        return new JsonResult(Mapper.MapStoreDto(entity));
 
-            return new JsonResult(Mapper.MapStoreDto(entity));
+                    }
+                }
+                return Problem("Customer Already available.");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
 
         }
 
@@ -144,10 +145,24 @@ namespace MVPStudioReactOnboarding.Controllers
                 return NotFound();
             }
 
-            _context.Stores.Remove(store);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
+            try
+            {
+                if (_context.Sales.Any(s => s.StoreId == store.Id))
+                {
+                    return Problem("Store connot be deleted when involved in a sale.");
+                }
+                else if ((bool)(_context.Stores.Any(c => c.Id == store.Id)))
+                {
+                    _context.Stores.Remove(store);
+                    await _context.SaveChangesAsync();
+                    return new JsonResult(Mapper.MapStoreDto(store));
+                }
+                return NotFound();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         private bool StoreExists(int id)

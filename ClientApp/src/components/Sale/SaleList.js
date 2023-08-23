@@ -1,6 +1,7 @@
 ﻿import React, { Component } from 'react';
 import { BsFillTrashFill, BsFillPencilFill } from "react-icons/bs";
 import { formatDate, Popup } from '../Utils'
+import $, { error } from 'jquery';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../Components.css';
 
@@ -9,12 +10,18 @@ export class SaleList extends Component {
 
     constructor(props) {
         super(props);
-        this.state = { customerNames: '', productNames :'', storeNames:'',createbtnshow:true, createOpen: false, editOpen: false, deleteOpen: false, current: '', sales: [], loading: true, editing: false, currentPage: 1, rowsPerPage: 5, totalSales: 0, error: false };
+        this.state = {
+            customerNames: '', productNames: '', storeNames: '',
+            createbtnshow: true, createOpen: false, editOpen: false, deleteOpen: false,
+            current: '', sales: [],
+            loading: true, editing: false,
+            currentPage: 1, rowsPerPage: 5, totalSales: 0,
+            errorUser: false, errorServer: false, errorMessage: '', successMessage: ''
+        };
     }
 
     //close popup window
     cancelPopup() {
-        //e.preventDefault();
         this.populateSaleData(this.state.currentPage);
         this.setState({
             editOpen: false, createbtnshow: true, deleteOpen: false, createOpen:false
@@ -25,9 +32,13 @@ export class SaleList extends Component {
     componentDidMount() {
         this.populateSaleData(this.state.currentPage);
     }
+    
+    //Render the sales data from model to view
     renderSales(data) {
         this.setState({ sales: data, loading: true, editOpen: false, createbtnshow: true });
     }
+     
+     //Processing Pagination
     renderPagination(data) {
         const indexOfLast = this.state.currentPage * this.state.rowsPerPage;
         const indexOfFirst = indexOfLast - this.state.rowsPerPage;
@@ -36,20 +47,35 @@ export class SaleList extends Component {
     }
 
     async populateSaleData(page) {
+        $("#loading-error").hide();
         this.setState({ currentPage: page })
         //Get method to retrieve data from Controller
         fetch('/api/sales')
-            .then((res) => res.json())
+            .then((res) => {
+                if (!res.ok) {
+
+
+                    this.setState({ errorServer: true })
+                    throw error("There has been a problem with fetching Sales!");
+
+                }
+                return res.json();
+            })
             .then((data) => {
+                $("#loading-error").hide();
+                $("#loading").fadeOut(1000);
                 this.renderPagination(data)
             })
             .catch(error => {
+                $("#loading").fadeOut(1000);
+                $("#loading-error").show();
                 console.error(
-                    "There has been a problem with your fetch operation for Get Customer List!",
+                    'Could not connect server to get sales details ' +
                     error.message
                 );
             });
 
+        //Retrieve cutomer names, product names and store names for user to select from the list
         Promise.all([
             fetch('/api/Customers'),
             fetch('/api/products'),
@@ -61,6 +87,10 @@ export class SaleList extends Component {
             this.setState({
                 customerNames: customernames, productNames: productnames, storeNames: storenames, editOpen: false, loading: true, createbtnshow: true
             })
+            if (!res1.ok || !res2.ok || !res3.ok) {
+                this.setState({ errorServer: true })
+                throw error("There has been a problem with fetching Customers, Products and Stores");
+            }
         })
             .catch(error => {
                 console.error(
@@ -84,7 +114,7 @@ export class SaleList extends Component {
         }
         return (
             <div className="pagination">
-                <p><label for="noOfSalesPerPage">Number of Sales in a page :&nbsp;</label>
+                <p>
 
                     <select name="noOfSalesPerPage" onChange={(e) => { this.noOfSalesPerPage(e.target.value) }}>
                         <option>5</option>
@@ -93,7 +123,6 @@ export class SaleList extends Component {
                         <option>50</option>
                     </select>
 
-                    <br></br>
                     {
                         pages.map((page, index) => {
                             return <button key={index} onClick={() => { this.populateSaleData(page) }}>{page}</button>
@@ -104,16 +133,36 @@ export class SaleList extends Component {
         )
     }
 
+    //Handle errors for users
+    userMessageHandler(message) {
+        if (message == "#success-message") {
+            $("#success-error").hide();
+            $(message).show();
+            $(message).fadeOut(2000);
+        } else if (message == "#error-message") {
+            $("#success-message").hide();
+            $(message).show();
+            $(message).fadeOut(2000);
+        } else {
+            $("#success-message").hide();
+            $("#error-message").hide();
+        }
+    }
+
+    //set select to edit sale
     updateSale(sale) {
         this.setState({
-            editOpen: true, current: sale, loading: true, createbtnshow: false
+            editOpen: true, current: sale, loading: true, createbtnshow: false, errorServer: false
         })
     }
         
     
-
+     //update current sale or create new sale
     saveSale(sale) {
-        if (sale) {
+        if (sale.productId == '' || sale.customerId == '' || sale.storeId == '') {
+            this.setState({ errorUser: true });
+        }
+        else if (sale) {
             fetch('/api/sales', {
                 method: 'post',
                 headers: new Headers({
@@ -122,24 +171,42 @@ export class SaleList extends Component {
                 }),
                 body: JSON.stringify(sale)
             })
-                .then((res) => res.json())
+                .then((res) => {
+                    if (res.ok) {
+                        if (sale.id > 0) {
+                            this.setState({ successMessage: 'Sale Details Successfully Updated!' });
+                            this.userMessageHandler("#success-message");
+                        } else {
+                            this.setState({ successMessage: 'Sale Details Successfully Created!' });
+                            this.userMessageHandler("#success-message");
+                        }
+                    }
+                    return res.json();
+                })
                 .then((data) => {
                     this.setState({ loading: true, editOpen: false, createbtnshow: true, createOpen: false })
                     this.populateSaleData(this.state.currentPage);
                 })
                 .catch(error => {
+                    this.setState({ errorServer: true })
                     console.error(
-                        "There has been a problem with your fetch operation for updating Customer!",
-                        error
+                        'Could not connect to the server for update/add sale request' + '' +
+                        error.message
                     );
                 });
+        } else {
+            console.error("Customer name or product name or store name cant be null for a sale");
+            this.setState({ errorUser: true });
         }
+        
     }
 
+    //request to delete a sale
     deleteSaleRequest(sale) {
-        this.setState({ current: sale, deleteOpen: true, loading: true, createbtnshow: true })
+        this.setState({ current: sale, deleteOpen: true, loading: true, createbtnshow: true, errorServer: false })
     }
 
+    //if confirmed by user then delete the sale
     deleteSale(sale) {
         fetch('/api/sales/' + sale.id, {
             method: 'DELETE',
@@ -150,29 +217,42 @@ export class SaleList extends Component {
             body: JSON.stringify(sale)
         })
 
-            .then(response => {
-                this.setState({ loading: true, editOpen: false, createbtnshow: true, deleteOpen: false })
-                this.populateSaleData(this.state.currentPage);
-                if (!response.ok) {
-                    throw new Error("Network response was not ok");
+            .then(res => {
+                if (res.ok) {
+
+                    this.setState({ successMessage: 'Customer Deleted Successfully!', loading: true, editOpen: false, createbtnshow: true, deleteOpen: false })
+                    this.populateSaleData(this.state.currentPage);
+                    this.userMessageHandler("#success-message");
+                }
+                else {
+                    if ((res.status == 500)) {
+                        this.setState({ errorMessage: 'Sale already been deleted!' })
+                        this.userMessageHandler("#error-message");
+                        this.cancelPopup();
+                        throw error('Sale has been already deleted');
+                    }
+                    else {
+                        this.setState({ errorServer: true, editOpen: false, createOpen:false })
+                        throw error('Could not connect to the server for delete sale request');
+                    }
                 }
             })
             .catch(error => {
                 console.error(
-                    "There has been a problem with your fetch operation for updating Customer!",
-                    error
+                    error.message
                 );
             });
-
     }
 
+    //Empty fields for create new sale
     createSale() {
         let currentDate = new Date();
         this.setState({
             createbtnshow: false,
             createOpen:true,
             editOpen: false,
-            error: false,
+            errorServer: false,
+            errorUser:false,
             loading: true,
             current: {
                 id: 0,
@@ -187,11 +267,13 @@ export class SaleList extends Component {
         })
     }
 
-
-    static renderSaleTable(customerNames, productNames, storeNames, sales, currentSale, ctrl,createPopup, editPopup, deletePopup, error) {
+    //Render customer table for view
+    static renderSaleTable(customerNames, productNames, storeNames, sales, currentSale, ctrl,createPopup, editPopup, deletePopup,error) {
         return (
             <div>
                 <table className='table table-striped' aria-labelledby="tabelLabel">
+                    <div id="loading" className="loading">Loading Sales....</div>
+                    <div id="loading-error" className="loading-error">Failed to Load Sales! check server connection.</div>
                     <thead>
                         <tr>
                             <th>Customer</th>
@@ -223,12 +305,15 @@ export class SaleList extends Component {
                         <table className='table table-striped' aria-labelledby="tabelLabel">
 
                             <thead>
+
                                 <tr>
                                     <th className="popup-title">Sale Details</th>
 
                                 </tr>
+                                {ctrl.state.errorServer
+                                    ? <div className="error">Server Connection failed!</div> : ""}
                             </thead>
-                            <tbody>
+                            <tbody className="sale-edit-add">
                                 <tr key={currentSale.id}>
                                     <td>
                                         <p> <input type="hidden" value={currentSale.id} name="id" /></p>
@@ -264,8 +349,10 @@ export class SaleList extends Component {
                                     <th className="popup-title">Sale Details</th>
 
                                 </tr>
+                                {ctrl.state.errorServer
+                                    ? <div className="error">Server Connection failed!</div> : ""}
                             </thead>
-                            <tbody>
+                            <tbody className=" sale-edit-add">
                                 <tr key={currentSale.id}>
                                     <td>
                                         <p> <input type="hidden" value={currentSale.id} name="id" /></p>
@@ -274,19 +361,26 @@ export class SaleList extends Component {
                                                 {'Select Customer'}
                                             </option>
                                             {customerNames?.map(c => <option value={c.id} key={c.id}>{c.name}</option>)}
-                                        </select> </p>
+                                        </select>
+                                            {error && currentSale.customerId == '' ?
+                                                <label className="error">Select Customer Name*</label>:''}
+                                        </p>
                                         <p><select name="productId" onChange={(e) => { currentSale.productId = e.target.value }}>
                                             <option defaultValue hidden>
                                                 {'Select Product'}
                                             </option>
                                             {productNames?.map(p => <option value={p.id} key={p.id}>{p.name}</option>)}
-                                        </select> </p>
+                                        </select>{error && currentSale.productId == '' ?
+                                                <label className="error">Select Product Name*</label> : ''}
+                                        </p>
                                         <p><select name="storeId" onChange={(e) => { currentSale.storeId = e.target.value }}>
                                             <option defaultValue hidden>
                                                 {'Select Store'}
                                             </option>
                                             {storeNames?.map(s => <option value={s.id} key={s.id}>{s.name}</option>)}
-                                        </select> </p>
+                                        </select> {error && currentSale.storeId == '' ?
+                                                <label className="error">Select Store Name*</label> : ''}
+                                        </p>
 
                                         <div className="btn-submit">
                                             <button onClick={() => { ctrl.saveSale(currentSale) }}>Save</button>
@@ -305,14 +399,16 @@ export class SaleList extends Component {
                         <table className='table table-striped' aria-labelledby="tabelLabel">
 
                             <thead>
+                                {ctrl.state.errorServer
+                                    ? <div className="error">Server Connection failed!</div> : ""}
                                 <tr>
-                                    <th>Do you want to delete details for sale : {currentSale.name}</th>
+                                    <th className="delete-confirm">Do you want to delete selected sale </th>
 
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><div className="btn-submit">
+                                    <td><div className="delete-btn-submit">
                                         <td><button onClick={() => { ctrl.deleteSale(currentSale) }}>Yes</button></td>
                                         <td><button onClick={() => { ctrl.cancelPopup() }}>No</button></td></div>
                                     </td>
@@ -330,7 +426,7 @@ export class SaleList extends Component {
 
     render() {
         let contents = this.state.loading
-            ? SaleList.renderSaleTable(this.state.customerNames, this.state.productNames, this.state.storeNames, this.state.sales, this.state.current, this, this.state.createOpen, this.state.editOpen, this.state.deleteOpen, this.state.error)
+            ? SaleList.renderSaleTable(this.state.customerNames, this.state.productNames, this.state.storeNames, this.state.sales, this.state.current, this, this.state.createOpen, this.state.editOpen, this.state.deleteOpen, this.state.errorUser)
             : SaleList.pagination();
 
 
@@ -338,6 +434,9 @@ export class SaleList extends Component {
             <div>
                 <div className="table-title">
                     <h3 >Sales Details</h3></div>
+                <hr></hr>
+                {<div>< div id="success-message" className="success-message" > {this.state.successMessage}</div >
+                    <div id="error-message" className="error-message">{this.state.errorMessage}</div></div>}
                 {contents}
                 {this.state.createbtnshow ?
                     <button className="btn-create-new" onClick={() => { this.createSale() }}>Create New</button>

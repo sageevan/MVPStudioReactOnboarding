@@ -86,13 +86,15 @@ ul li a:before {
     color:red;
 }
 .success-message {
-    visibility: initial;
     color: green;
 }
 
 .error-message {
-    visibility: initial;
     color: #ff4c5c;
+}
+.sale-edit-add select {
+    border-radius: 8px;
+    width:100%;
 }
 
 
@@ -106,9 +108,18 @@ ul li a:before {
     width: 100%;
 }
 
-    .container button {
-        border-radius: 25px;
-    }
+.delete-confirm {
+    font-size: 16px;
+    color: #ff4c5c;
+    font-weight:500;
+}
+.product-price {
+    text-align: left;
+}
+
+.container button {
+    border-radius: 25px;
+}
 
         .container button:hover {
             transform: scale(1.2);
@@ -124,14 +135,7 @@ ul li a:before {
     color: #ff4c5c;
     margin-left: 10px;
 }
-.btn-delete-yes{
-    color:red;
-}
-    .btn-delete-yes:hover{
-    }
-    .btn-delete-no {
-        color: green;
-    }
+
 
     .popup {
         position: fixed;
@@ -198,7 +202,8 @@ ul li a:before {
 }
 
 
-.btn-submit button {
+.delete-btn-submit button {
+    margin-top:15px;
     border-radius: 35px;
     align-content: center;
     justify-content: center;
